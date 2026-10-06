@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Platform, Text, View } from 'react-native';
+import { Image, Platform, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
 import * as ImagePicker from 'expo-image-picker';
 import { ActionButton, Card, EmptyNote, Field } from './Primitives';
 import { useGolf, type PracticeActivity } from '@/context/GolfContext';

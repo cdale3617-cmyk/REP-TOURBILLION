@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
 import { useColors } from '@/hooks/useColors';
 import { describeShotConditions, type ShotConditions } from '@/utils/shotConditions';
 

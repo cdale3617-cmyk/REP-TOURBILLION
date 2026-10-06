@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
 import { ActionButton, Card, EmptyNote, Field, SectionTitle } from '@/components/Primitives';
 import { GolfRound, HoleScore, useGolf } from '@/context/GolfContext';
 import { useColors } from '@/hooks/useColors';

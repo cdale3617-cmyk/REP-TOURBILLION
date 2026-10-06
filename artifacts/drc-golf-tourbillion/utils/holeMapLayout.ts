@@ -5,8 +5,8 @@ export function getHoleMapLayout(windowWidth: number, windowHeight = 800) {
   const viewWidth = 260;
   const mapPanelWidth = Math.max(1, sideBySide ? (width - 84) / 2 : width - 72);
   const maxFrameHeight = Math.max(1, Math.floor(height * 0.9));
-  const minimumFrameHeight = Math.min(280, maxFrameHeight);
-  const preferredFrameHeight = sideBySide ? mapPanelWidth * 2.1 : width * 1.25;
+  const minimumFrameHeight = Math.min(sideBySide ? 280 : 220, maxFrameHeight);
+  const preferredFrameHeight = sideBySide ? mapPanelWidth * 2.1 : Math.min(340, height * 0.4);
   const frameHeight = Math.max(
     1,
     Math.min(

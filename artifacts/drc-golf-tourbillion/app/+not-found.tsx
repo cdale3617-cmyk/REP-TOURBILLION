@@ -1,5 +1,6 @@
 import { Link, Stack } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 
@@ -40,14 +41,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
     borderWidth: 1,
-    borderRadius: 18,
-    gap: 13,
+    borderRadius: 16,
+    gap: 12,
   },
-  mark: { width: 52, height: 52, borderWidth: 1, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 3 },
+  mark: { width: 52, height: 52, borderWidth: 1, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 3 },
   eyebrow: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_700Bold', letterSpacing: 1.1 },
   title: {
-    fontSize: 24,
-    fontFamily: 'serif',
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
     textAlign: 'center',
     lineHeight: 31,
   },

@@ -34,11 +34,11 @@ function assertMapCanvasMatchesPanel(layout) {
   assert.ok(Math.abs(canvasRatio - panelRatio) < 0.01, `${canvasRatio} should match ${panelRatio}`);
 }
 
-test('phone layouts keep the map tall and let its canvas follow the available panel', () => {
+test('phone maps leave room for hole controls and keep their canvas matched to the panel', () => {
   for (const [width, height] of [[200, 800], [360, 780], [392, 852], [440, 800]]) {
     const layout = getHoleMapLayout(width, height);
     assert.equal(layout.sideBySide, false);
-    assert.equal(layout.tall, true);
+    assert.ok(layout.frameHeight <= 340);
     assert.ok(layout.frameHeight <= height * 0.9);
     assertMapCanvasMatchesPanel(layout);
   }
@@ -98,7 +98,7 @@ test('very short and very wide viewports keep the canvas positive and within ava
 test('invalid window measurements fall back to a usable phone layout', () => {
   const layout = getHoleMapLayout(Number.NaN, 0);
   assert.equal(layout.sideBySide, false);
-  assert.equal(layout.frameHeight, 450);
+  assert.equal(layout.frameHeight, 320);
   assertMapCanvasMatchesPanel(layout);
 });
 

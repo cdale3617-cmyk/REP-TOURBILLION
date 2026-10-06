@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActionButton, Card, EmptyNote, Page, PageHeading, Pill, SectionTitle } from '@/components/Primitives';
@@ -15,6 +15,7 @@ import { getHoleMapLayout } from '@/utils/holeMapLayout';
 import { WindReading } from '@/utils/wind';
 import { HolePerformanceEditor } from '@/components/HolePerformanceEditor';
 import { AntiGlareButton } from '@/components/AntiGlareButton';
+import { AppText as Text } from '@/components/AppText';
 
 export default function RoundScreen() {
   const colors = useColors();
@@ -23,6 +24,7 @@ export default function RoundScreen() {
   const holeMapLayout = getHoleMapLayout(windowWidth, windowHeight);
   const [windState, setWindState] = useState<{ courseId: string; reading: WindReading } | null>(null);
   const [statsDirty, setStatsDirty] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const { courses, activeRound, lastCourseId, startRound, setCurrentHole, setHoleScore, finishRound, unit, rounds, dailyPins, removeDailyPin, bag, isReady, storageError } = useGolf();
   const { gps, error: gpsError, now, enabled, setEnabled, retry, locating } = useDevicePosition();
   useFocusEffect(useCallback(() => () => setEnabled(false), [setEnabled]));
@@ -42,7 +44,7 @@ export default function RoundScreen() {
   const total = useMemo(() => activeRound?.holes.reduce((sum, item) => sum + (item.score ?? 0), 0) ?? 0, [activeRound]);
   const relative = score && hole ? score - hole.par : null;
   const geometry = getCourseGeometry(course?.id);
-  const holeGeometry = geometry?.holes.find((item) => item.hole === activeRound?.currentHole);
+  const holeGeometry = geometry?.holes.find((item) => item.hole === (activeRound?.currentHole ?? 1));
   const { meters: gpsDistance, reason: distanceStatus } = getTargetDistance(gps, holeGeometry?.target, now);
   const displayDistance = gpsDistance === null ? null : Math.round(unit === 'yd' ? gpsDistance * 1.09361 : gpsDistance);
   const recordedPin = dailyPins.find((pin) => pin.courseId === course?.id && pin.hole === activeRound?.currentHole);
@@ -56,31 +58,29 @@ export default function RoundScreen() {
 
   return (
     <Page>
-      <AntiGlareButton />
-      <PageHeading eyebrow="Live round" title="ROUND" subtitle={course ? `${course.name} · 18-hole scorecard` : 'Choose a course to get started'} right={<Pill tone="green">{played}/18 PLAYED</Pill>} />
+      <PageHeading title={activeRound ? `Hole ${activeRound.currentHole} · Par ${hole?.par ?? '—'}` : 'ROUND'} subtitle={course?.name ?? 'Choose a course to get started'} right={<Pill tone="green">{played}/18</Pill>} />
       {!activeRound ? (
           <Card style={styles.emptyCard}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.secondary }]}><Feather name="flag" size={22} color={colors.primary} /></View>
+           <Text style={[styles.courseName, { color: colors.foreground }]}>Hole 1{holeGeometry ? ` · Par ${holeGeometry.par}` : ''}</Text>
+           <HoleMap geometry={holeGeometry} />
           <View style={styles.emptyCopy}>
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Ready when you are</Text>
-            <Text style={[styles.body, { color: colors.mutedForeground }]}>Start a round to open hole-by-hole scoring, course weather, caddie advice, and GPS.</Text>
+             <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>Start to keep score and use live GPS. The map shows the sourced playing path, not a satellite image.</Text>
           </View>
           <View style={[styles.courseReadiness, { borderTopColor: colors.border }]}>
             <Text style={[styles.bodySmall, { color: colors.primary }]}>{course?.name ?? 'COURSE NOT SELECTED'}</Text>
             <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>{geometry ? '18 source-checked hole paths available' : 'GPS distances unavailable for this course'}</Text>
           </View>
-          <ActionButton title={`Start at ${course?.name ?? 'last course'}`} icon="play" onPress={begin} disabled={!course || !isReady || !!storageError} testID="start-round" />
+           <ActionButton title="Start round · hole 1" icon="play" onPress={begin} disabled={!course || !isReady || !!storageError} testID="start-round" />
+           <ActionButton title="Choose another course" icon="map-pin" secondary onPress={() => router.push('/tool/course-library')} testID="round-choose-course" />
           <ActionButton title="Round Performance Coach" icon="trending-up" secondary onPress={() => router.push('/tool/score-comparison')} testID="open-round-coach" />
           {rounds.length > 0 ? <Text style={[styles.lastRound, { color: colors.mutedForeground }]}>Last saved card · {rounds[0].holes.filter((item) => item.score !== null).length} holes recorded</Text> : null}
         </Card>
       ) : (
         <>
-          <SectionTitle>Hole {activeRound.currentHole}</SectionTitle>
           <Card style={styles.roundCard}>
             <View style={styles.courseRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.courseName, { color: colors.foreground }]}>{course?.name ?? 'Selected course'}</Text>
-                <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>{course?.area ?? 'Course area'}</Text>
+                 <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>GREEN REFERENCE · NORTH UP</Text>
               </View>
               {holeMapLayout.sideBySide ? (
                 <View style={styles.compactHoleNav}>
@@ -120,11 +120,16 @@ export default function RoundScreen() {
                     <Pill tone={gpsDistance !== null ? 'green' : 'muted'}>{gpsDistance !== null ? 'GPS ACTIVE' : locating ? 'FINDING GPS' : 'NO DISTANCE'}</Pill>
                   </View>
                 </View>
-                <Text style={[styles.body, { color: colors.mutedForeground }]}>{distanceStatus}</Text>
+                 <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>{distanceStatus}</Text>
                 <ActionButton title={enabled ? 'Stop GPS' : 'Enable live GPS distance'} icon="crosshair" onPress={() => setEnabled(!enabled)} disabled={!holeGeometry} testID="enable-gps" />
               </>
             )}
-            {geometry && holeGeometry ? (
+             <Pressable testID="round-map-details-toggle" accessibilityRole="button" accessibilityState={{ expanded: detailsOpen }} onPress={() => setDetailsOpen(v => !v)} style={styles.detailsToggle}>
+               <Text style={[styles.bodySmall, { color: colors.primary }]}>Today’s pin & map details</Text>
+               <Feather name={detailsOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.primary} />
+             </Pressable>
+             <View style={{ display: detailsOpen ? 'flex' : 'none', gap: 10 }}>
+             {geometry && holeGeometry ? (
               <View style={{ gap: 8 }}>
                 <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>SOURCE-CHECKED HOLE {activeRound.currentHole} · {geometry.holes.length}/18 MAPPED · CHECKED {geometry.checkedAt}</Text>
                 <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(`https://www.openstreetmap.org/way/${holeGeometry.osmWayId}`)}>
@@ -159,16 +164,10 @@ export default function RoundScreen() {
               )}
               {holeGeometry ? <DailyPinCapture key={`${activeRound.id}:${activeRound.currentHole}`} roundId={activeRound.id} courseId={activeRound.courseId} hole={activeRound.currentHole} target={holeGeometry.target} replacing={!!dailyPin} /> : <Text style={[styles.body, { color: colors.mutedForeground }]}>Pin capture requires a source-checked green reference for this hole.</Text>}
             </View>
+             </View>
           </Card>
 
           {course ? <WeatherCard latitude={geometry?.latitude ?? course.latitude} longitude={geometry?.longitude ?? course.longitude} onWindChange={handleWindChange} /> : null}
-
-          {!holeMapLayout.sideBySide ? (
-            <Card style={{ ...styles.adviceCard, borderLeftColor: colors.primary }}>
-              <View style={styles.adviceHead}><Feather name="compass" size={16} color={colors.primary} /><Text style={[styles.adviceLabel, { color: colors.primary }]}>CADDIE ENGINE</Text></View>
-              <CaddieAssistant clubs={bag} unit={unit} currentHole={activeRound.currentHole} par={hole?.par} liveDistanceMeters={gpsDistance} wind={currentWind} />
-            </Card>
-          ) : null}
 
           <SectionTitle>Score</SectionTitle>
           <Card style={styles.scoreCard}>
@@ -187,6 +186,12 @@ export default function RoundScreen() {
               <Text style={[styles.total, { color: colors.foreground }]}>TOTAL <Text style={{ color: colors.primary }}>{total || '—'}</Text></Text>
             </View>
           </Card>
+           {!holeMapLayout.sideBySide ? (
+             <Card style={{ ...styles.adviceCard, borderLeftColor: colors.primary }}>
+               <View style={styles.adviceHead}><Feather name="compass" size={16} color={colors.primary} /><Text style={[styles.adviceLabel, { color: colors.primary }]}>CADDIE ENGINE</Text></View>
+               <CaddieAssistant clubs={bag} unit={unit} currentHole={activeRound.currentHole} par={hole?.par} liveDistanceMeters={gpsDistance} wind={currentWind} />
+             </Card>
+           ) : null}
 
           {hole ? <HolePerformanceEditor key={`${activeRound.id}:${hole.hole}`} roundId={activeRound.id} hole={hole} onDirtyChange={setStatsDirty} /> : null}
           {statsDirty ? <EmptyNote>Save statistics or discard your edits before changing holes or finishing the round.</EmptyNote> : null}
@@ -200,41 +205,43 @@ export default function RoundScreen() {
           <EmptyNote>Live distances require GPS accuracy within 30 m. Pin capture requires a new fix within 10 m accuracy and 60 m of this hole’s mapped green, plus your on-green confirmation. Recorded pins expire at local midnight and remain separate from sourced green references. Neither is survey-grade.</EmptyNote>
         </>
       )}
+      <AntiGlareButton />
     </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  roundCard: { gap: 14, padding: 15 },
+  roundCard: { gap: 9, padding: 10 },
+  detailsToggle: { minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   courseRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   compactHoleNav: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   holeNavButton: { width: 34, height: 34, borderWidth: 1, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   splitHoleRow: { flexDirection: 'row', alignItems: 'stretch', gap: 12 },
   splitHoleMap: { flex: 1, minWidth: 0 },
   splitHoleDistance: { flex: 1, minWidth: 0, justifyContent: 'space-between', gap: 8, paddingVertical: 5 },
-  courseName: { fontSize: 16, lineHeight: 22, fontFamily: 'Inter_700Bold', flexShrink: 1 },
+  courseName: { fontSize: 17, lineHeight: 23, fontFamily: 'Inter_700Bold', flexShrink: 1, letterSpacing: -0.2 },
   body: { fontSize: 15, lineHeight: 23, fontFamily: 'Inter_400Regular' },
   bodySmall: { fontSize: 12, lineHeight: 18, fontFamily: 'Inter_500Medium', letterSpacing: 0.2 },
   micro: { fontSize: 12, lineHeight: 16, fontFamily: 'Inter_400Regular' },
-  mapFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  distance: { fontSize: 34, lineHeight: 38, fontFamily: 'Inter_700Bold', marginTop: 3 },
+  mapFooter: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', alignItems: 'center' },
+  distance: { fontSize: 28, lineHeight: 34, fontFamily: 'Inter_700Bold', marginTop: 3, fontVariant: ['tabular-nums'], letterSpacing: -0.8 },
   unit: { fontSize: 14, fontFamily: 'Inter_500Medium' },
   permissionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   adviceCard: { gap: 10, borderLeftWidth: 2 },
   splitAdvice: { gap: 8, borderTopWidth: 1, paddingTop: 12 },
   adviceHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   adviceLabel: { fontSize: 12, lineHeight: 16, fontFamily: 'Inter_700Bold', letterSpacing: 0.7 },
-  scoreCard: { gap: 14 },
+  scoreCard: { gap: 12 },
   scoreSummary: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   scoreControl: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  stepper: { width: 42, height: 42, borderWidth: 1, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  scoreNum: { fontSize: 34, fontFamily: 'Inter_700Bold' },
+  stepper: { width: 46, height: 46, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  scoreNum: { fontSize: 36, lineHeight: 43, fontFamily: 'Inter_700Bold', fontVariant: ['tabular-nums'], letterSpacing: -0.8 },
   totalLine: { borderTopWidth: 1, paddingTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  total: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_700Bold', letterSpacing: 0.4 },
+  total: { fontSize: 13, lineHeight: 19, fontFamily: 'Inter_700Bold', letterSpacing: 0.5, fontVariant: ['tabular-nums'] },
   navRow: { flexDirection: 'row', gap: 10 },
   emptyTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', marginBottom: 7 },
-  emptyCard: { gap: 13, padding: 17 },
-  emptyIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  emptyCard: { gap: 12, padding: 14 },
+  emptyIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   emptyCopy: { gap: 3 },
   courseReadiness: { borderTopWidth: 1, paddingTop: 12, gap: 5 },
   lastRound: { fontSize: 14, lineHeight: 21, fontFamily: 'Inter_500Medium' },

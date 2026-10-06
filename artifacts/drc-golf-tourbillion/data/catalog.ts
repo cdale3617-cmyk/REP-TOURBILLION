@@ -37,7 +37,7 @@ export const labTools: AppTool[] = [
   },
   {
     slug: 'short-game',
-    title: 'INSIDE 100M',
+    title: 'inside 100m',
     icon: 'flag',
     description: 'Track short-game practice reps from inside 100 m, with a session note.',
     howTo: ['Log one rep after each short-game attempt.', 'Use the session note for your club, target, or contact.', 'Save the set to keep the practice record on this device.'],
@@ -88,8 +88,8 @@ export const labTools: AppTool[] = [
     slug: 'pre-round',
     title: 'Pre-Round',
     icon: 'check-square',
-    description: 'Use a saved checklist to prepare your bag and round.',
-    howTo: ['Work through the checklist before play.', 'Tap an item to mark it complete.', 'Checklist progress is saved on this device.'],
+    description: 'Check your tee time, course weather, equipment and warm-up before play.',
+    howTo: ['Confirm your tee time and check-in with the course; this tool does not book or verify reservations.', 'Review current course-area weather and check course conditions with the club. Current weather is not a forecast for your tee time.', 'Tap each preparation item to mark it complete. Progress is saved on this device; untick items to check them again before your next round.'],
   },
   {
     slug: 'club-equipment',
@@ -167,9 +167,13 @@ export const moreTools: AppTool[] = [
 ];
 
 export const preRoundItems = [
+  'Tee time and check-in confirmed',
+  'Weather and course conditions checked',
+  'Local rules board checked',
   'Clubs and bag ready',
   'Golf balls and tees packed',
   'Rangefinder or GPS charged',
   'Water and weather layer packed',
+  'Sunscreen and hat packed',
   'Warm-up and putting completed',
 ];

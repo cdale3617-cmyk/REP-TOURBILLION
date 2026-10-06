@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActionButton, Card, EmptyNote, IconButton, Page, PageHeading } from '@/components/Primitives';
 import { ClipReview } from '@/components/ClipReview';
@@ -53,7 +54,7 @@ export default function VideosScreen() {
     {loading ? <ActivityIndicator color={colors.primary} /> : reviews.length === 0 ? <Card><EmptyNote>No videos saved yet. Record or select a clip, then save it to your video library.</EmptyNote><ActionButton title="Record a swing" icon="video" onPress={() => router.push('/record')} /></Card> : null}
     {selected ? <Card><SavedClip key={selected.id} review={selected} /><EmptyNote>{selected.note || 'No review note.'}</EmptyNote><ActionButton title="Close playback" secondary onPress={() => setSelected(null)} /></Card> : null}
     {reviews.map((review) => <Card key={review.id}>
-      <Text style={{ color: colors.foreground, fontSize: 17, fontFamily: 'Inter_600SemiBold' }}>{review.tool === 'shot-tracer' ? 'Shot video' : 'Swing video'}</Text>
+      <Text style={{ color: colors.foreground, fontSize: 16, lineHeight: 22, fontFamily: 'Inter_700Bold' }}>{review.tool === 'shot-tracer' ? 'Shot video' : 'Swing video'}</Text>
       <EmptyNote>{`${new Date(review.createdAt).toLocaleString()}${review.note ? `\n${review.note}` : ''}`}</EmptyNote>
       <ActionButton title="Review video" icon="play" disabled={busy} onPress={() => setSelected(review)} testID={`play-video-${review.id}`} />
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>

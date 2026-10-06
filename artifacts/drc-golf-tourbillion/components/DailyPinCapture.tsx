@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
 import { useFocusEffect } from 'expo-router';
 import { ActionButton } from './Primitives';
 import { useGolf } from '@/context/GolfContext';

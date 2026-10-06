@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, Platform, StyleSheet, useWindowDimensions, View, Text } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
 import { Feather } from '@expo/vector-icons';
 import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
 import { useColors } from '@/hooks/useColors';

@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { AppText as Text, AppTextInput as TextInput } from '@/components/AppText';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ActionButton, Card, Page, Pill, SectionTitle } from '@/components/Primitives';
@@ -70,9 +71,6 @@ export default function HomeScreen() {
       <AntiGlareButton />
       <View accessibilityRole="header" accessible accessibilityLabel="DRC Golf Tempo" style={[styles.brandRow, { borderColor: colors.rim, backgroundColor: colors.surfaceRaised, boxShadow: `0px 6px 14px ${colors.shadow}` }]}>
         <View style={[styles.brandTrim, { backgroundColor: colors.primary, pointerEvents: 'none' }]} />
-        <View style={[styles.logo, { borderColor: colors.primary, backgroundColor: colors.card }]}>
-          <Image source={require('@/assets/images/icon.png')} style={styles.logoImage} />
-        </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.brand, { color: colors.primary }]}>DRC</Text>
           <Text style={[styles.brandSub, { color: colors.mutedForeground }]}>GOLF TEMPO</Text>
@@ -109,6 +107,42 @@ export default function HomeScreen() {
         <Pill tone="green">GOLF LAB</Pill>
       </View>
 
+      <SectionTitle>Start</SectionTitle>
+      <Card style={styles.courseCard}>
+        <View style={styles.courseHead}>
+          <View style={{ flex: 1 }}>
+            <Text numberOfLines={2} style={[styles.courseName, { color: colors.foreground }]}>{course?.name ?? 'Choose a course'}</Text>
+            <Text style={[styles.smallText, { color: colors.mutedForeground }]}>{course?.area ?? 'Course library'} · PAR {course?.par ?? 72}</Text>
+          </View>
+          <Feather name="map-pin" size={18} color={colors.primary} />
+        </View>
+        {activeRound ? (
+          <ActionButton title={`Continue round · hole ${activeRound.currentHole}`} icon="arrow-right" onPress={() => router.push('/round')} testID="continue-round" />
+        ) : (
+          <ActionButton title="Start a new round" icon="play" onPress={() => goToRound()} testID="quick-start-round" />
+        )}
+        <Pressable testID="open-course-library" accessibilityRole="button" onPress={() => router.push('/tool/course-library')} style={[styles.lastCourse, { borderTopColor: colors.border }]}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={[styles.lastCourseTitle, { color: colors.foreground }]}>Choose or find a course</Text>
+            <Text style={[styles.smallText, { color: colors.mutedForeground }]}>Last course · {rounds[0] ? (courses.find((item) => item.id === rounds[0].courseId)?.name ?? 'Saved round') : course?.name ?? 'None saved yet'}</Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+        </Pressable>
+      </Card>
+
+      <View style={styles.quickRow}>
+        <Pressable testID="home-enable-gps" accessibilityRole="button" disabled={gpsLoading} onPress={() => void locateFromHome()} style={[styles.quickTile, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+          <Feather name="crosshair" size={17} color={colors.primary} />
+          <Text style={[styles.quickTileText, { color: colors.foreground }]}>{gpsLoading ? 'Finding GPS…' : gpsPosition ? 'GPS locked' : 'Enable GPS'}</Text>
+        </Pressable>
+        <Pressable testID="home-open-lab" accessibilityRole="button" onPress={() => router.push('/lab')} style={[styles.quickTile, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+          <Feather name="activity" size={17} color={colors.primary} />
+          <Text style={[styles.quickTileText, { color: colors.foreground }]}>Open the Lab</Text>
+        </Pressable>
+      </View>
+      {gpsPosition ? <Text style={[styles.smallText, { color: colors.mutedForeground }]}>GPS position · {gpsPosition.latitude.toFixed(5)}, {gpsPosition.longitude.toFixed(5)}</Text> : null}
+      {gpsMessage ? <Text style={[styles.smallText, { color: colors.destructive }]}>{gpsMessage}</Text> : null}
+      <SectionTitle>Ask your caddie</SectionTitle>
       <Card style={{ ...styles.caddieCard, borderLeftColor: colors.primary }}>
         <View style={styles.caddieHead}>
           <View style={[styles.caddieIcon, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
@@ -136,72 +170,35 @@ export default function HomeScreen() {
       <SectionTitle>Course conditions</SectionTitle>
       {course ? <WeatherCard latitude={course.latitude} longitude={course.longitude} onWindChange={handleWindChange} /> : null}
 
-      <SectionTitle>Quick start</SectionTitle>
-      <Card style={styles.courseCard}>
-        <View style={styles.courseHead}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.courseName, { color: colors.foreground }]}>{course?.name ?? 'Choose a course'}</Text>
-            <Text style={[styles.smallText, { color: colors.mutedForeground }]}>{course?.area ?? 'Course library'} · PAR {course?.par ?? 72}</Text>
-          </View>
-          <Feather name="map-pin" size={18} color={colors.primary} />
-        </View>
-        {activeRound ? (
-          <ActionButton title={`Continue round · hole ${activeRound.currentHole}`} icon="arrow-right" onPress={() => router.push('/round')} testID="continue-round" />
-        ) : (
-          <ActionButton title="Start a new round" icon="play" onPress={() => goToRound()} testID="quick-start-round" />
-        )}
-        <Pressable testID="open-course-library" accessibilityRole="button" onPress={() => router.push('/tool/course-library')} style={[styles.lastCourse, { borderTopColor: colors.border }]}>
-          <View>
-            <Text style={[styles.lastCourseTitle, { color: colors.foreground }]}>Choose or find a course</Text>
-            <Text style={[styles.smallText, { color: colors.mutedForeground }]}>Last course · {rounds[0] ? (courses.find((item) => item.id === rounds[0].courseId)?.name ?? 'Saved round') : course?.name ?? 'None saved yet'}</Text>
-          </View>
-          <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
-        </Pressable>
-      </Card>
-
-      <View style={styles.quickRow}>
-        <Pressable testID="home-enable-gps" accessibilityRole="button" disabled={gpsLoading} onPress={() => void locateFromHome()} style={[styles.quickTile, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-          <Feather name="crosshair" size={17} color={colors.primary} />
-          <Text style={[styles.quickTileText, { color: colors.foreground }]}>{gpsLoading ? 'Finding GPS…' : gpsPosition ? 'GPS locked' : 'Enable GPS'}</Text>
-        </Pressable>
-        <Pressable testID="home-open-lab" accessibilityRole="button" onPress={() => router.push('/lab')} style={[styles.quickTile, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-          <Feather name="activity" size={17} color={colors.primary} />
-          <Text style={[styles.quickTileText, { color: colors.foreground }]}>Open the Lab</Text>
-        </Pressable>
-      </View>
-      {gpsPosition ? <Text style={[styles.smallText, { color: colors.mutedForeground }]}>GPS position · {gpsPosition.latitude.toFixed(5)}, {gpsPosition.longitude.toFixed(5)}</Text> : null}
-      {gpsMessage ? <Text style={[styles.smallText, { color: colors.destructive }]}>{gpsMessage}</Text> : null}
     </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  brandRow: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderRadius: 17 },
+  brandRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderRadius: 17 },
   brandTrim: { position: 'absolute', top: 0, left: 16, right: 16, height: 2, opacity: 0.9 },
-  logo: { width: 50, height: 50, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 1 },
-  logoImage: { width: 46, height: 46, borderRadius: 14 },
-  brand: { fontSize: 39, lineHeight: 45, fontFamily: 'serif', fontWeight: '700', letterSpacing: 2.1, includeFontPadding: false },
-  brandSub: { fontSize: 16, lineHeight: 22, fontFamily: 'Inter_700Bold', letterSpacing: 1.6, marginTop: 1, flexShrink: 1 },
+  brand: { fontSize: 32, lineHeight: 38, fontFamily: 'serif', fontWeight: '700', letterSpacing: 2.1, includeFontPadding: false },
+  brandSub: { fontSize: 13, lineHeight: 18, fontFamily: 'Inter_700Bold', letterSpacing: 1.6, marginTop: 1, flexShrink: 1 },
   statusDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1, marginHorizontal: 2 },
-  welcomeRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingTop: 4, paddingBottom: 3 },
+  welcomeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: 10, paddingTop: 4, paddingBottom: 3 },
   kicker: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_700Bold', letterSpacing: 0.85, marginBottom: 7 },
-  nameLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  welcome: { fontSize: 28, lineHeight: 35, fontFamily: 'serif', letterSpacing: -0.4 },
+  nameLine: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  welcome: { fontSize: 20, lineHeight: 26, fontFamily: 'Inter_700Bold', letterSpacing: -0.2 },
   nameEdit: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  nameInput: { minWidth: 150, fontSize: 23, borderBottomWidth: 1, paddingVertical: 4, fontFamily: 'Inter_600SemiBold' },
-  caddieCard: { padding: 16, gap: 13, borderLeftWidth: 3 },
+  nameInput: { minWidth: 140, minHeight: 44, fontSize: 20, borderBottomWidth: 1, paddingVertical: 4, fontFamily: 'Inter_600SemiBold' },
+  caddieCard: { padding: 12, gap: 10, borderLeftWidth: 3 },
   caddieHead: { flexDirection: 'row', alignItems: 'center', gap: 11 },
-  caddieIcon: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  caddieTitle: { fontSize: 17, lineHeight: 22, fontFamily: 'Inter_700Bold' },
-  smallText: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_500Medium', marginTop: 4, flexShrink: 1 },
-  caddieFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTopWidth: 1 },
+  caddieIcon: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  caddieTitle: { fontSize: 16, lineHeight: 22, fontFamily: 'Inter_700Bold' },
+  smallText: { fontSize: 13, lineHeight: 19, fontFamily: 'Inter_500Medium', marginTop: 4, flexShrink: 1 },
+  caddieFoot: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTopWidth: 1 },
   caddieStat: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_700Bold', letterSpacing: 0.45 },
-  courseCard: { padding: 16, gap: 15 },
+  courseCard: { padding: 12, gap: 10 },
   courseHead: { flexDirection: 'row', alignItems: 'center' },
   courseName: { fontSize: 16, lineHeight: 21, fontFamily: 'Inter_700Bold' },
-  lastCourse: { borderTopWidth: 1, paddingTop: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  lastCourseTitle: { fontSize: 16, lineHeight: 22, fontFamily: 'Inter_600SemiBold' },
-  quickRow: { flexDirection: 'row', gap: 10 },
-  quickTile: { flex: 1, borderRadius: 13, borderWidth: 1, minHeight: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 8 },
-  quickTileText: { fontSize: 14, lineHeight: 19, fontFamily: 'Inter_600SemiBold', flexShrink: 1 },
+  lastCourse: { minHeight: 44, borderTopWidth: 1, paddingTop: 10, gap: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  lastCourseTitle: { fontSize: 15, lineHeight: 22, fontFamily: 'Inter_600SemiBold' },
+  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  quickTile: { flexGrow: 1, flexBasis: 140, borderRadius: 12, borderWidth: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 8 },
+  quickTileText: { fontSize: 13, lineHeight: 19, fontFamily: 'Inter_600SemiBold', flexShrink: 1 },
 });

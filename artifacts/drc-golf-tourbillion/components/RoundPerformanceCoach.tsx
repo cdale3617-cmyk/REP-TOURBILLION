@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
 import { useRouter } from 'expo-router';
 import { ActionButton, Card, EmptyNote, Pill, SectionTitle } from '@/components/Primitives';
 import { GolfRound, useGolf } from '@/context/GolfContext';
@@ -74,7 +75,7 @@ export function RoundPerformanceCoach() {
         {metrics.map((m) => (
           <View key={m.key} testID={`coach-metric-${m.key}`} style={{ gap: 3 }}>
             <Text style={{ color: colors.mutedForeground, fontSize: 13, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.45, textTransform: 'uppercase' }}>{m.label}</Text>
-            <Text style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Georgia' }}>{m.value}</Text>
+            <Text style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Inter_700Bold' }}>{m.value}</Text>
             <Text style={{ color: colors.mutedForeground, fontSize: 13, lineHeight: 19 }}>{m.detail}</Text>
           </View>
         ))}
@@ -83,7 +84,7 @@ export function RoundPerformanceCoach() {
 
       <Card>
         <SectionTitle>Practice focus</SectionTitle>
-        <Text testID="coach-focus-title" style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Georgia' }}>{summary.focus.title}</Text>
+        <Text testID="coach-focus-title" style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Inter_700Bold' }}>{summary.focus.title}</Text>
         <Text style={muted}>{summary.focus.reason}</Text>
         <Text style={{ color: colors.foreground, fontSize: 15, lineHeight: 22 }}>{summary.focus.practice}</Text>
         {summary.focus.tool ? (
@@ -98,7 +99,7 @@ export function RoundPerformanceCoach() {
         <SectionTitle>Trend</SectionTitle>
         {comparison ? (
           <View testID="coach-trend" style={{ gap: 6 }}>
-            <Text style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Georgia' }}>
+            <Text style={{ color: colors.foreground, fontSize: 20, fontFamily: 'Inter_700Bold' }}>
               {comparison.scoreChange === 0 ? 'Same total as last time' : `${Math.abs(comparison.scoreChange)} stroke${Math.abs(comparison.scoreChange) === 1 ? '' : 's'} ${comparison.scoreChange > 0 ? 'worse' : 'better'}`}
             </Text>
             <Text style={muted}>Latest against the previous round at {courseName(comparison.latest.courseId)} over the same {comparison.holes} scored holes and pars.</Text>

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { Card } from '@/components/Primitives';
@@ -61,7 +62,7 @@ export function WeatherCard({ latitude, longitude, onWindChange }: {
       <View style={[styles.icon, { backgroundColor: colors.secondary, borderColor: colors.border }]}><Feather name="wind" size={17} color={colors.primary} /></View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.heading, { color: colors.foreground }]}>COURSE WEATHER</Text>
-          <Text style={[styles.sub, { color: colors.mutedForeground }]}>Open-Meteo · course-area forecast</Text>
+          <Text style={[styles.sub, { color: colors.mutedForeground }]}>Open-Meteo · current course-area conditions</Text>
         </View>
         <Pressable onPress={() => void load()} accessibilityRole="button" accessibilityLabel="Refresh weather" testID="weather-refresh">
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Feather name="refresh-cw" size={16} color={colors.mutedForeground} />}
@@ -80,7 +81,7 @@ export function WeatherCard({ latitude, longitude, onWindChange }: {
         </View>
       ) : (
         <Text style={[styles.sub, { color: error ? colors.destructive : colors.mutedForeground }]}>
-          {loading ? 'Loading live forecast…' : error ? 'Weather unavailable. Tap refresh to try again.' : 'No forecast data.'}
+          {loading ? 'Loading current weather…' : error ? 'Weather unavailable. Tap refresh to try again.' : 'No current weather data.'}
         </Text>
       )}
     </Card>
@@ -94,7 +95,7 @@ const styles = StyleSheet.create({
   heading: { fontSize: 13, lineHeight: 18, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
   sub: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_400Regular', marginTop: 3, flexShrink: 1 },
   row: { flexDirection: 'row', alignItems: 'center' },
-  temp: { fontSize: 34, fontFamily: 'serif' },
+  temp: { fontSize: 34, lineHeight: 40, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
   condition: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_400Regular' },
   wind: { flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderRadius: 12, paddingHorizontal: 11, paddingVertical: 9 },
   windText: { fontSize: 14, lineHeight: 19, fontFamily: 'Inter_600SemiBold' },

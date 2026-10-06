@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { clubSetupKey, shotBelongsToClub } from '@/utils/shotProfiles';
-import { ActivityIndicator, Animated, AppState, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
@@ -18,6 +19,7 @@ import { GreenReadings } from '@/components/GreenReadings';
 import { ManualHealthHistory } from '@/components/ManualHealthHistory';
 import { SavedRoundPerformanceEditor } from '@/components/HolePerformanceEditor';
 import { RoundPerformanceCoach } from '@/components/RoundPerformanceCoach';
+import { WeatherCard } from '@/components/WeatherCard';
 import { ShotConditionsPicker } from '@/components/ShotConditionsPicker';
 import { describeShotConditions, type ShotConditions } from '@/utils/shotConditions';
 
@@ -84,31 +86,6 @@ async function currentPosition(): Promise<{ latitude: number; longitude: number 
   if (!permission.granted) throw new Error('Location permission is needed to find nearby courses.');
   const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
   return { latitude: position.coords.latitude, longitude: position.coords.longitude };
-}
-
-function MotionReference({ label, type }: { label: string; type: 'flight' | 'roll' | 'chip' | 'line' }) {
-  const colors = useColors();
-  const progress = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const animation = Animated.loop(Animated.sequence([
-      Animated.timing(progress, { toValue: 1, duration: type === 'roll' ? 1800 : 2200, useNativeDriver: true }),
-      Animated.timing(progress, { toValue: 0, duration: 0, useNativeDriver: true }),
-    ]));
-    animation.start();
-    return () => animation.stop();
-  }, [progress, type]);
-  const flight = type === 'flight' || type === 'chip';
-  const x = progress.interpolate({ inputRange: [0, 1], outputRange: [0, 230] });
-  const y = progress.interpolate({ inputRange: flight ? [0, 0.45, 1] : [0, 1], outputRange: flight ? [0, -36, 0] : [0, 0] });
-  return (
-    <View style={[styles.motionBox, { backgroundColor: colors.muted }]} accessibilityLabel={`${label}. Animated illustration only, not measured data.`}>
-      <Svg width="100%" height="64" viewBox="0 0 300 64">
-        {flight ? <><Line x1="18" y1="51" x2="282" y2="51" stroke={colors.border} strokeWidth="1.5" /><Line x1="24" y1="51" x2="276" y2="51" stroke={colors.secondary} strokeDasharray="3 6" /><Circle cx="277" cy="47" r="8" fill="none" stroke={colors.primary} strokeWidth="2" /></> : type === 'line' ? <><Line x1="22" y1="50" x2="278" y2="22" stroke={colors.primary} strokeWidth="2" strokeDasharray="5 4" /><Line x1="22" y1="54" x2="278" y2="54" stroke={colors.border} strokeWidth="2" /><Circle cx="278" cy="22" r="5" fill={colors.primary} /></> : <><Line x1="20" y1="51" x2="280" y2="51" stroke={colors.border} strokeWidth="2" /><Circle cx="278" cy="45" r="8" fill="none" stroke={colors.primary} strokeWidth="2" /></>}
-      </Svg>
-      <Animated.View style={[styles.motionBall, { backgroundColor: colors.primary, borderColor: colors.card, transform: [{ translateX: x }, { translateY: y }] }]} />
-      <Text style={[styles.motionLabel, { color: colors.mutedForeground }]}>{label} · illustration only</Text>
-    </View>
-  );
 }
 
 export default function ToolScreen() {
@@ -442,10 +419,12 @@ export default function ToolScreen() {
               ) : null}
               </View>
             ) : (
-              <View style={[styles.kineticsViewfinder, { borderColor: colors.border, backgroundColor: colors.background }]}>
-                <View style={[styles.viewfinderCross, { borderColor: colors.border }]} />
-                <View style={[styles.viewfinderRing, { borderColor: colors.primary, backgroundColor: colors.secondary }]}><Feather name="user" size={25} color={colors.primary} /></View>
-                <Text style={[styles.profileLabel, { color: colors.primary }]}>CAMERA CLIP · VIDEO ONLY</Text>
+              <View style={[styles.kineticsStatus, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                <Feather name="video" size={18} color={colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.profileLabel, { color: colors.primary }]}>CAMERA CLIP · VIDEO ONLY</Text>
+                  <Text style={[styles.small, { color: colors.mutedForeground }]}>No club, impact or body measurements are taken from video.</Text>
+                </View>
               </View>
             )}
             <Text style={[styles.sourceNote, { color: colors.foreground }]}>{isTracer ? 'S24 FLIGHT LIMIT' : 'S24 SENSOR LIMIT'}</Text>
@@ -654,7 +633,6 @@ export default function ToolScreen() {
         <View style={styles.twoButtons}><ActionButton title="Made" icon="check" onPress={() => { setMade(made + 1); setAttempts(attempts + 1); }} /><ActionButton title="Missed" icon="x" secondary onPress={() => setAttempts(attempts + 1)} /></View>
         <ActionButton title="Save practice set" icon="save" secondary disabled={!attempts} onPress={() => { logPractice('Putting set', `${made}/${attempts} made from ${practiceDistance} ${golf.unit}`, attempts ? made / attempts * 100 : 0); setAttempts(0); setMade(0); }} testID="save-putting-set" />
       </Card>
-      <MotionReference type="roll" label="Putting roll" />
       <Card><Text style={[styles.tipHeading, { color: colors.primary }]}>PRACTICE CUE</Text><Text style={[styles.body, { color: colors.foreground }]}>On longer putts, focus on finishing the ball close rather than forcing a make. Keep your pace steady.</Text></Card>
       </>;
     }
@@ -677,7 +655,6 @@ export default function ToolScreen() {
         <Field label="Session note" value={note} onChangeText={setNote} placeholder="Club, target, or contact note" />
         <ActionButton title="Save practice set" icon="save" secondary disabled={!reps} onPress={() => { logPractice(`${reps} practice reps`, note || 'Practice set completed.', reps); setReps(0); setNote(''); }} />
       </Card>
-      <MotionReference type="chip" label="Chip flight and rollout" />
       <Card><Text style={[styles.tipHeading, { color: colors.primary }]}>PRACTICE CUE</Text><Text style={[styles.body, { color: colors.foreground }]}>Pick a landing point, then let the ball roll out. A predictable landing spot is easier to repeat than aiming straight at the hole.</Text></Card>
       </>;
     }
@@ -692,7 +669,6 @@ export default function ToolScreen() {
     if (slug === 'green-reading') {
       return <>
       <GreenReadings />
-      <MotionReference type="line" label="Example start line" />
       <Card><Text style={[styles.tipHeading, { color: colors.primary }]}>READING CUE</Text><Text style={[styles.body, { color: colors.foreground }]}>Look from behind the ball and the hole. Note the high side, slope direction and needed pace before choosing a start line.</Text></Card>
       </>;
     }
@@ -754,7 +730,33 @@ export default function ToolScreen() {
       </>;
     }
     if (slug === 'pre-round') {
-      return <Card><View style={styles.inlineRow}><Text style={[styles.cardTitle, { color: colors.foreground, flex: 1 }]}>Ready for the first tee</Text><Pill tone="green">{golf.checklist.length}/{preRoundItems.length}</Pill></View>{preRoundItems.map((item) => <Pressable key={item} testID={`checklist-${item}`} onPress={() => golf.toggleChecklistItem(item)} style={styles.checkRow}><Feather name={golf.checklist.includes(item) ? 'check-square' : 'square'} size={20} color={golf.checklist.includes(item) ? colors.primary : colors.mutedForeground} /><Text style={[styles.body, { color: colors.foreground, flex: 1 }]}>{item}</Text></Pressable>)}</Card>;
+      const geometry = getCourseGeometry(selectedCourse?.id);
+      const checked = preRoundItems.filter((item) => golf.checklist.includes(item)).length;
+      return <>
+        <Card>
+          <View style={styles.inlineRow}>
+            <Feather name="flag" size={18} color={colors.primary} />
+            <Text style={[styles.cardTitle, { color: colors.foreground, flex: 1 }]}>{selectedCourse?.name ?? 'Choose your course'}</Text>
+          </View>
+          <EmptyNote>Confirm your tee time and check-in with the club. This checklist does not book or verify a reservation.</EmptyNote>
+          <ActionButton title="Check course details" icon="info" secondary testID="pre-round-course-details" onPress={() => router.push('/tool/course-information')} />
+        </Card>
+        {selectedCourse ? <WeatherCard key={selectedCourse.id} latitude={geometry?.latitude ?? selectedCourse.latitude} longitude={geometry?.longitude ?? selectedCourse.longitude} /> : <Card><EmptyNote>Select a course to see its current weather.</EmptyNote><ActionButton title="Choose a course" icon="map" secondary onPress={() => router.push('/tool/course-library')} /></Card>}
+        <Card>
+          <View style={styles.inlineRow}>
+            <Text style={[styles.cardTitle, { color: colors.foreground, flex: 1 }]}>Ready for the first tee</Text>
+            <Pill tone="green">{checked}/{preRoundItems.length}</Pill>
+          </View>
+          <EmptyNote>Weather above shows current course-area conditions, not a forecast for your tee time. Check closures and playing conditions with the club.</EmptyNote>
+          {preRoundItems.map((item) => (
+            <Pressable key={item} testID={`checklist-${item}`} accessibilityRole="checkbox" accessibilityLabel={item} accessibilityState={{ checked: golf.checklist.includes(item) }} onPress={() => golf.toggleChecklistItem(item)} style={styles.checkRow}>
+              <Feather name={golf.checklist.includes(item) ? 'check-square' : 'square'} size={20} color={golf.checklist.includes(item) ? colors.primary : colors.mutedForeground} />
+              <Text style={[styles.body, { color: colors.foreground, flex: 1 }]}>{item}</Text>
+            </Pressable>
+          ))}
+          <EmptyNote>Checks stay saved on this device. Untick items to check them again before your next round.</EmptyNote>
+        </Card>
+      </>;
     }
     if (slug === 'club-equipment') {
       return <Card><Text style={[styles.cardTitle, { color: colors.foreground }]}>{golf.bag.length} clubs configured</Text>{golf.bag.map((club) => <View key={club.id} style={styles.inlineRow}><Text style={[styles.body, { color: colors.foreground, flex: 1 }]}>{club.name}</Text><Text style={[styles.small, { color: colors.primary }]}>{Math.round(golf.unit === 'yd' ? club.carryMeters * 1.09361 : club.carryMeters)} {golf.unit}</Text><Text style={[styles.small, { color: colors.mutedForeground }]}>{club.loft}°</Text></View>)}<ActionButton title="Edit your bag" icon="sliders" onPress={() => router.push('/bag')} /></Card>;
@@ -840,15 +842,15 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: -10 },
   topBarText: { flex: 1, fontSize: 12, lineHeight: 17, fontFamily: 'Inter_700Bold', letterSpacing: 0.8 },
   inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  cardTitle: { fontSize: 16, lineHeight: 23, fontFamily: 'Inter_700Bold', flexShrink: 1 },
+  cardTitle: { fontSize: 16, lineHeight: 22, fontFamily: 'Inter_700Bold', flexShrink: 1 },
   body: { fontSize: 15, lineHeight: 23, fontFamily: 'Inter_400Regular' },
   small: { fontSize: 14, lineHeight: 21, fontFamily: 'Inter_400Regular', marginTop: 4 },
   statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 4 },
-  bigStat: { fontSize: 30, lineHeight: 36, fontFamily: 'Inter_700Bold' },
-  statLabel: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.35, marginTop: 5 },
+  bigStat: { fontSize: 28, lineHeight: 34, fontFamily: 'Inter_700Bold', letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
+  statLabel: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.8, marginTop: 3 },
   twoButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   wrapChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  chip: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8 },
+  chip: { borderRadius: 10, paddingHorizontal: 11, paddingVertical: 8, borderWidth: StyleSheet.hairlineWidth },
   chipText: { fontSize: 14, lineHeight: 19, fontFamily: 'Inter_600SemiBold' },
   greenPhoto: { width: '100%', height: 210, borderRadius: 13 },
   imageEmpty: { minHeight: 140, borderRadius: 13, alignItems: 'center', justifyContent: 'center', gap: 10 },
@@ -856,9 +858,6 @@ const styles = StyleSheet.create({
   scoreRow: { flexDirection: 'row', alignItems: 'center' },
   guideRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   guideIndex: { fontSize: 12, lineHeight: 18, fontFamily: 'Inter_700Bold', marginTop: 3 },
-  motionBox: { minHeight: 92, borderRadius: 14, paddingHorizontal: 12, paddingTop: 8, overflow: 'hidden', position: 'relative' },
-  motionBall: { position: 'absolute', left: 19, top: 47, width: 9, height: 9, borderRadius: 5, borderWidth: 1 },
-  motionLabel: { fontSize: 12, lineHeight: 18, fontFamily: 'Inter_500Medium', textAlign: 'center', marginTop: 0 },
   axisCaption: { fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 0 },
   summaryStrip: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, borderTopWidth: 1, marginTop: 10, paddingTop: 12 },
   summaryValue: { fontSize: 16, lineHeight: 23, fontFamily: 'Inter_700Bold', flexShrink: 1 },
@@ -870,16 +869,14 @@ const styles = StyleSheet.create({
   motionStats: { flexDirection: 'row', gap: 12, borderTopWidth: 1, paddingTop: 9, marginTop: 3 },
   instrumentHead: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   instrumentEyebrow: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_700Bold', letterSpacing: 0.7, marginBottom: 4 },
-  instrumentTitle: { fontSize: 20, lineHeight: 27, fontFamily: 'Inter_700Bold' },
+  instrumentTitle: { fontSize: 19, lineHeight: 25, letterSpacing: -0.2, fontFamily: 'Inter_700Bold' },
   flightProfile: { borderWidth: 1, borderRadius: 12, padding: 11, minHeight: 148 },
   smashStrip: { flexDirection: 'row', alignItems: 'center', gap: 10, borderTopWidth: 1, paddingTop: 9, marginTop: 5 },
   smashValue: { fontSize: 22, lineHeight: 26, fontFamily: 'Inter_700Bold', marginTop: 3 },
   profileLabel: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
   profileEmpty: { height: 92, alignItems: 'center', justifyContent: 'center', gap: 5 },
   profileDisclaimer: { fontSize: 13, lineHeight: 19, fontFamily: 'Inter_400Regular', flexShrink: 1 },
-  kineticsViewfinder: { minHeight: 145, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden' },
-  viewfinderCross: { position: 'absolute', width: '67%', height: '65%', borderWidth: 1, opacity: 0.55 },
-  viewfinderRing: { width: 62, height: 62, borderWidth: 1, borderRadius: 31, alignItems: 'center', justifyContent: 'center' },
+  kineticsStatus: { borderWidth: 1, borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   sourceNote: { fontSize: 12, lineHeight: 18, fontFamily: 'Inter_700Bold', letterSpacing: 0.7, marginBottom: 0 },
   disclaimer: { fontSize: 14, lineHeight: 21, fontFamily: 'Inter_400Regular' },
   measurementCard: { padding: 14, gap: 12 },
@@ -887,12 +884,12 @@ const styles = StyleSheet.create({
   manualLabel: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
   recentMetricsCard: { padding: 14, gap: 10 },
   readingGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  readingCell: { width: '48%', minHeight: 88, borderWidth: 1, borderRadius: 10, padding: 10, justifyContent: 'space-between' },
+  readingCell: { width: '48%', minHeight: 80, borderWidth: 1, borderRadius: 10, padding: 10, justifyContent: 'space-between' },
   impactPair: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   impactCell: { flex: 1, minWidth: '46%', minHeight: 100, borderWidth: 1, borderRadius: 10, padding: 10, justifyContent: 'space-between', gap: 6 },
-  impactValue: { fontSize: 23, lineHeight: 28, fontFamily: 'Inter_700Bold' },
+  impactValue: { fontSize: 23, lineHeight: 28, fontFamily: 'Inter_700Bold', fontVariant: ['tabular-nums'] },
   impactCaption: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_700Bold', letterSpacing: 0.2, flexShrink: 1 },
   readingLabel: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.1, flexShrink: 1 },
-  readingValue: { fontSize: 18, lineHeight: 25, fontFamily: 'Inter_700Bold', flexShrink: 1 },
+  readingValue: { fontSize: 19, lineHeight: 25, fontFamily: 'Inter_700Bold', fontVariant: ['tabular-nums'], flexShrink: 1 },
   readingUnit: { fontSize: 13, lineHeight: 18, fontFamily: 'Inter_600SemiBold' },
 });

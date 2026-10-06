@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/"
+title = "DRC Golf Tourbillion"
+description = "A personal golf companion for managing a bag, navigating live rounds, and improving through the Golf Lab. Stores rounds and club setup on device and uses native location and camera capabilities when available."
+version = "1.0.0"
+id = "artifacts/drc-golf-tourbillion"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/" ]
+localPort = 24198
+
+[services.development]
+run = "pnpm --filter @workspace/drc-golf-tourbillion run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/drc-golf-tourbillion", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/drc-golf-tourbillion", "run", "serve" ]
+
+[services.env]
+PORT = "24198"
+BASE_PATH = "/"

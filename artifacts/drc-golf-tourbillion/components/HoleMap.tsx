@@ -58,15 +58,20 @@ function WindArrow({ anchor, index, direction, duration, color }: {
   );
 }
 
-export function HoleMap({ geometry, position, dailyPin, wind }: {
+export function HoleMap({ geometry, position, dailyPin, wind, availableHeight }: {
   geometry?: VerifiedHole;
   position?: Coordinate | null;
   dailyPin?: Coordinate;
   wind?: WindReading | null;
+  availableHeight?: number;
 }) {
   const colors = useColors();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const { viewWidth, viewHeight, frameHeight, plot } = getHoleMapLayout(windowWidth, windowHeight);
+  const { viewWidth, viewHeight, frameHeight, plot } = getHoleMapLayout(windowWidth, windowHeight, availableHeight);
+  const shortMap = viewHeight < 120;
+  const labelSize = shortMap ? 10 : 12;
+  const labelX = (x: number) => Math.max(36, Math.min(viewWidth - 36, x));
+  const labelY = (y: number) => Math.max(labelSize + 2, Math.min(viewHeight - 4, y));
   const flowDirection = wind ? windFlowDirectionDegrees(wind.windDirection) : null;
   const movingWind = wind && flowDirection !== null && Number.isFinite(wind.windKph) && wind.windKph >= 1;
   if (!geometry) {
@@ -107,16 +112,16 @@ export function HoleMap({ geometry, position, dailyPin, wind }: {
       <Svg width="100%" height="100%" viewBox={`0 0 ${viewWidth} ${viewHeight}`}>
         <Path d={path.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${p.y}`).join(' ')} stroke={colors.mapGreen} strokeWidth={3} fill="none" />
         <Circle cx={path[0].x} cy={path[0].y} r={5} fill={colors.mutedForeground} />
-        <SvgText x={path[0].x} y={path[0].y + 20} fontSize={12} textAnchor="middle" fill={colors.foreground}>Tee</SvgText>
+        <SvgText x={labelX(path[0].x)} y={labelY(path[0].y + 20)} fontSize={labelSize} textAnchor="middle" fill={colors.foreground}>Tee</SvgText>
         <Circle cx={target.x} cy={target.y} r={6} fill={colors.primary} />
-        <SvgText x={target.x} y={target.y - 12} fontSize={12} textAnchor="middle" fill={colors.foreground}>Green ref</SvgText>
+        <SvgText x={labelX(target.x)} y={labelY(target.y - 12)} fontSize={labelSize} textAnchor="middle" fill={colors.foreground}>Green ref</SvgText>
         {pin ? <>
           <Circle cx={pin.x} cy={pin.y} r={9} fill="none" stroke={colors.foreground} strokeWidth={2} />
-          <SvgText x={pin.x} y={pin.y + 24} fontSize={12} textAnchor="middle" fill={colors.foreground}>Your pin</SvgText>
+          <SvgText x={labelX(pin.x)} y={labelY(pin.y + 24)} fontSize={labelSize} textAnchor="middle" fill={colors.foreground}>Your pin</SvgText>
         </> : null}
         {player ? <Circle cx={player.x} cy={player.y} r={6} fill={colors.foreground} stroke={colors.background} strokeWidth={2} /> : null}
-        <SvgText x={viewWidth - 12} y={20} fontSize={12} textAnchor="end" fill={colors.foreground}>N ↑</SvgText>
-        <SvgText x={12} y={viewHeight - 10} fontSize={12} fill={colors.mutedForeground}>{player ? 'White marker: your GPS position' : 'Playing path · not a fairway outline'}</SvgText>
+        <SvgText x={viewWidth - 12} y={shortMap ? viewHeight - 6 : 20} fontSize={labelSize} textAnchor="end" fill={colors.foreground}>N ↑</SvgText>
+        {!shortMap ? <SvgText x={12} y={viewHeight - 10} fontSize={12} fill={colors.mutedForeground}>{player ? 'White marker: your GPS position' : 'Playing path · not a fairway outline'}</SvgText> : null}
       </Svg>
       {wind ? (
         <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.windBadge, { backgroundColor: colors.mapBase, borderColor: colors.border, pointerEvents: 'none' }]}>

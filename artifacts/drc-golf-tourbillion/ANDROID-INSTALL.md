@@ -35,7 +35,7 @@ Samsung account password is needed in DRC.
 - Android package: `com.drc.golftourbillion`.
 - Display name: `DRC Golf Tempo`. Technical identifiers and the established backup
   marker retain their original values to preserve saved data and backup compatibility.
-- App version: `1.0.1`; Android version code: `2`. The More screen displays both
+- App version: `1.0.2`; Android version code: `3`. The More screen displays both
   values so an installed build can be distinguished from an older download.
 - Keep the package ID and signing identity unchanged for future updates.
 - No account, backend or secrets are needed for the implemented golf features.

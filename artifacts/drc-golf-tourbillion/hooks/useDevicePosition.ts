@@ -3,8 +3,9 @@ import { AppState, Platform } from 'react-native';
 import * as Location from 'expo-location';
 import type { DeviceFix } from '@/utils/courseGeometry';
 
-export function useDevicePosition() {
-  const [enabled, setEnabled] = useState(false);
+export function useDevicePosition(active?: boolean) {
+  const [requested, setEnabled] = useState(false);
+  const enabled = active ?? requested;
   const [gps, setGps] = useState<DeviceFix | null>(null);
   const [error, setError] = useState('');
   const [now, setNow] = useState(Date.now());
@@ -29,13 +30,17 @@ export function useDevicePosition() {
     let cancelled = false;
     let browserWatch: number | undefined;
     let nativeWatch: Location.LocationSubscription | undefined;
+    let latestTimestamp = -Infinity;
     setGps(null);
     setError('');
     const firstFixTimeout = setTimeout(() => {
       if (!cancelled) setError('Still waiting for GPS. Move outdoors or retry.');
     }, 15000);
     const receive = (fix: DeviceFix) => {
-      if (!cancelled) { clearTimeout(firstFixTimeout); setGps(fix); setNow(Date.now()); setError(''); }
+      if (!cancelled && fix.timestamp >= latestTimestamp) {
+        latestTimestamp = fix.timestamp;
+        clearTimeout(firstFixTimeout); setGps(fix); setNow(Date.now()); setError('');
+      }
     };
     const fail = (message: string) => {
       if (!cancelled) { clearTimeout(firstFixTimeout); setGps(null); setError(message); }
@@ -62,6 +67,11 @@ export function useDevicePosition() {
           fail(permission.canAskAgain ? 'Location access is needed for GPS distance.' : 'Location access is off in device settings.');
           return;
         }
+        if (!await Location.hasServicesEnabledAsync()) {
+          fail('Turn on Location in device settings, then retry GPS.');
+          return;
+        }
+        if (cancelled) return;
         const subscription = await Location.watchPositionAsync(
           { accuracy: Location.Accuracy.Highest, timeInterval: 1000, distanceInterval: 0 },
           ({ coords, timestamp, mocked }) => receive({
@@ -70,7 +80,16 @@ export function useDevicePosition() {
           () => fail('Could not get a GPS fix. Move outdoors and try again.'),
         );
         if (cancelled) subscription.remove();
-        else nativeWatch = subscription;
+        else {
+          nativeWatch = subscription;
+          // Request an initial fix as well as watching for subsequent movement.
+          void Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest })
+            .then(({ coords, timestamp, mocked }) => receive({
+              latitude: coords.latitude, longitude: coords.longitude,
+              accuracy: coords.accuracy, timestamp, mocked,
+            }))
+            .catch(() => { /* The live watcher and timeout still report status. */ });
+        }
       } catch { fail('Could not start GPS. Check location settings and try again.'); }
     }
     void watch();

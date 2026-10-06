@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { AppText as Text, AppTextInput as TextInput } from '@/components/AppText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -12,18 +12,21 @@ import * as Haptics from 'expo-haptics';
 export function Page({ children, contentStyle }: { children: ReactNode; contentStyle?: object }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const short = height < 700;
   const { isReady, storageError } = useGolf();
   if (!isReady) return <View style={[styles.root, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}><ActivityIndicator color={colors.primary} /></View>;
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <KeyboardAwareScrollViewCompat
         contentInsetAdjustmentBehavior="automatic"
+        style={{ flex: 1 }}
         bottomOffset={20}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.page,
-          { paddingTop: Platform.OS === 'web' ? 67 : Math.max(insets.top, 12) + 8, paddingBottom: Platform.OS === 'web' ? 118 : 70 + insets.bottom + 24 },
+          { paddingTop: Platform.OS === 'web' ? (short ? 16 : Math.min(67, Math.round(height * 0.07))) : Math.max(insets.top, short ? 6 : 12) + (short ? 4 : 8), paddingBottom: Platform.OS === 'web' ? (short ? 96 : 118) : 70 + insets.bottom + (short ? 12 : 24), gap: short ? 9 : 13 },
           contentStyle,
         ]}
       >

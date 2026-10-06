@@ -17,6 +17,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GolfProvider } from '@/context/GolfContext';
 import { useColors } from '@/hooks/useColors';
 import { AppearanceProvider } from '@/context/AppearanceContext';
+import { LiveGpsProvider } from '@/context/LiveGpsContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -60,8 +61,10 @@ export default function RootLayout() {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
               <GolfProvider>
+                <LiveGpsProvider>
                 <StatusBar style="light" />
                 <RootLayoutNav />
+                </LiveGpsProvider>
               </GolfProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>

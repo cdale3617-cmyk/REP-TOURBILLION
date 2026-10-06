@@ -1,26 +1,26 @@
 import React, { useCallback, useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText as Text, AppTextInput as TextInput } from '@/components/AppText';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { ActionButton, Card, Page, Pill, SectionTitle } from '@/components/Primitives';
+import { ActionButton, Card, Page, Pill } from '@/components/Primitives';
+import { ExpandablePanel, useDeviceMetrics } from '@/components/ExpandablePanel';
 import { CaddieAssistant } from '@/components/CaddieAssistant';
 import { WeatherCard } from '@/components/WeatherCard';
 import { useGolf } from '@/context/GolfContext';
 import { useColors } from '@/hooks/useColors';
 import { AntiGlareButton } from '@/components/AntiGlareButton';
 import type { WindReading } from '@/utils/wind';
-import * as Location from 'expo-location';
+import { useLiveGps } from '@/context/LiveGpsContext';
 
 export default function HomeScreen() {
   const colors = useColors();
   const router = useRouter();
   const { playerName, setPlayerName, courses, lastCourseId, activeRound, startRound, setLastCourseId, rounds, bag, unit } = useGolf();
+  const { compact } = useDeviceMetrics();
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(playerName);
-  const [gpsPosition, setGpsPosition] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [gpsMessage, setGpsMessage] = useState('');
-  const [gpsLoading, setGpsLoading] = useState(false);
+  const { gps: gpsPosition, error: gpsMessage, locating: gpsLoading, enabled: gpsEnabled, setEnabled: setGpsEnabled } = useLiveGps();
   const course = courses.find((item) => item.id === (activeRound?.courseId ?? lastCourseId)) ?? courses[0];
   const courseId = course?.id;
   const [windState, setWindState] = useState<{ courseId: string; reading: WindReading } | null>(null);
@@ -39,48 +39,25 @@ export default function HomeScreen() {
     router.push('/round');
   }
 
-  async function locateFromHome() {
-    setGpsLoading(true);
-    setGpsMessage('');
-    try {
-      if (Platform.OS === 'web') {
-        const position = await new Promise<{ latitude: number; longitude: number }>((resolve, reject) => {
-          if (!navigator.geolocation) { reject(new Error('GPS is unavailable in this browser.')); return; }
-          navigator.geolocation.getCurrentPosition(
-            (result) => resolve({ latitude: result.coords.latitude, longitude: result.coords.longitude }),
-            () => reject(new Error('Allow location access to use GPS.')),
-            { enableHighAccuracy: true, timeout: 12000 },
-          );
-        });
-        setGpsPosition(position);
-      } else {
-        const permission = await Location.requestForegroundPermissionsAsync();
-        if (!permission.granted) { setGpsMessage('Allow location access to use GPS.'); return; }
-        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-        setGpsPosition({ latitude: position.coords.latitude, longitude: position.coords.longitude });
-      }
-    } catch {
-      setGpsMessage('GPS unavailable. Check location permission and try outdoors.');
-    } finally {
-      setGpsLoading(false);
-    }
+  function locateFromHome() {
+    setGpsEnabled(!gpsEnabled);
   }
 
   return (
     <Page>
       <AntiGlareButton />
-      <View accessibilityRole="header" accessible accessibilityLabel="DRC Golf Tempo" style={[styles.brandRow, { borderColor: colors.rim, backgroundColor: colors.surfaceRaised, boxShadow: `0px 6px 14px ${colors.shadow}` }]}>
+      {compact ? null : <View accessibilityRole="header" accessible accessibilityLabel="DRC Golf Tempo" style={[styles.brandRow, { borderColor: colors.rim, backgroundColor: colors.surfaceRaised, boxShadow: `0px 6px 14px ${colors.shadow}` }]}>
         <View style={[styles.brandTrim, { backgroundColor: colors.primary, pointerEvents: 'none' }]} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.brand, { color: colors.primary }]}>DRC</Text>
           <Text style={[styles.brandSub, { color: colors.mutedForeground }]}>GOLF TEMPO</Text>
         </View>
         <View style={[styles.statusDot, { backgroundColor: colors.emerald, borderColor: colors.rim }]} />
-      </View>
+      </View>}
 
       <View style={styles.welcomeRow}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.kicker, { color: colors.primary }]}>YOUR COURSE COMPANION</Text>
+          {compact ? null : <Text style={[styles.kicker, { color: colors.primary }]}>YOUR COURSE COMPANION</Text>}
           {editingName ? (
             <View style={styles.nameEdit}>
               <TextInput
@@ -107,7 +84,6 @@ export default function HomeScreen() {
         <Pill tone="green">GOLF LAB</Pill>
       </View>
 
-      <SectionTitle>Start</SectionTitle>
       <Card style={styles.courseCard}>
         <View style={styles.courseHead}>
           <View style={{ flex: 1 }}>
@@ -131,18 +107,18 @@ export default function HomeScreen() {
       </Card>
 
       <View style={styles.quickRow}>
-        <Pressable testID="home-enable-gps" accessibilityRole="button" disabled={gpsLoading} onPress={() => void locateFromHome()} style={[styles.quickTile, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+        <Pressable testID="home-enable-gps" accessibilityRole="button" onPress={locateFromHome} style={[styles.quickTile, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
           <Feather name="crosshair" size={17} color={colors.primary} />
-          <Text style={[styles.quickTileText, { color: colors.foreground }]}>{gpsLoading ? 'Finding GPS…' : gpsPosition ? 'GPS locked' : 'Enable GPS'}</Text>
+          <Text style={[styles.quickTileText, { color: colors.foreground }]}>{gpsLoading ? 'Finding GPS…' : gpsEnabled ? 'Stop live GPS' : 'Live GPS'}</Text>
         </Pressable>
         <Pressable testID="home-open-lab" accessibilityRole="button" onPress={() => router.push('/lab')} style={[styles.quickTile, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
           <Feather name="activity" size={17} color={colors.primary} />
           <Text style={[styles.quickTileText, { color: colors.foreground }]}>Open the Lab</Text>
         </Pressable>
       </View>
-      {gpsPosition ? <Text style={[styles.smallText, { color: colors.mutedForeground }]}>GPS position · {gpsPosition.latitude.toFixed(5)}, {gpsPosition.longitude.toFixed(5)}</Text> : null}
+      {gpsPosition ? <Text style={[styles.smallText, { color: colors.mutedForeground }]}>Live GPS · {gpsPosition.latitude.toFixed(5)}, {gpsPosition.longitude.toFixed(5)} · ±{gpsPosition.accuracy === null ? '?' : Math.round(gpsPosition.accuracy)} m</Text> : null}
       {gpsMessage ? <Text style={[styles.smallText, { color: colors.destructive }]}>{gpsMessage}</Text> : null}
-      <SectionTitle>Ask your caddie</SectionTitle>
+      <ExpandablePanel testID="home-caddie-panel" title="Ask your caddie" icon="compass" subtitle={`${bag.length} clubs in bag`}>
       <Card style={{ ...styles.caddieCard, borderLeftColor: colors.primary }}>
         <View style={styles.caddieHead}>
           <View style={[styles.caddieIcon, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
@@ -166,9 +142,11 @@ export default function HomeScreen() {
           <Text style={[styles.caddieStat, { color: colors.primary }]}>{bag.length} CLUBS IN BAG</Text>
         </View>
       </Card>
+      </ExpandablePanel>
 
-      <SectionTitle>Course conditions</SectionTitle>
-      {course ? <WeatherCard latitude={course.latitude} longitude={course.longitude} onWindChange={handleWindChange} /> : null}
+      <ExpandablePanel testID="home-weather-panel" title="Course conditions" icon="cloud" subtitle={course?.name}>
+        {course ? <WeatherCard latitude={course.latitude} longitude={course.longitude} onWindChange={handleWindChange} /> : null}
+      </ExpandablePanel>
 
     </Page>
   );

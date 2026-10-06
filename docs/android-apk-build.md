@@ -1,4 +1,4 @@
-# Android installer through GitHub Actions
+# DRC Golf Tempo — Android installer through GitHub Actions
 
 Target repository: https://github.com/cdale3617-cmyk/REP-TOURBILLION
 
@@ -39,6 +39,8 @@ can request the build through GitHub Actions.
 The normal screen/button palette is the user-selected charcoal, white and silver.
 The approved artwork remains unchanged. Anti-glare is still a separate saved
 display option; switching it off restores the charcoal/silver palette.
+The app's display name is DRC Golf Tempo. Existing package/storage identifiers and
+the backup envelope remain unchanged; this is a cosmetic rename, not a data migration.
 
 This is a **personal sideload/testing installer**, signed with Expo's generated
 test keystore. It is not signed with a private production key and is not a

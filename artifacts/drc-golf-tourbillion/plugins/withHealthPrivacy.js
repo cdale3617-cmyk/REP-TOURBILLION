@@ -47,7 +47,7 @@ public class HealthPrivacyActivity extends Activity {
     text.setTextSize(18);
     int padding = (int) (24 * getResources().getDisplayMetrics().density);
     text.setPadding(padding, padding, padding, padding);
-    text.setText("DRC Golf Tourbillion — Health privacy\\n\\n"
+    text.setText("DRC Golf Tempo — Health privacy\\n\\n"
       + "We request read-only access to heart rate and oxygen saturation to let you review your own recent measured readings alongside your golf activities.\\n\\n"
       + "We read only the last seven days after you tap Allow access / refresh readings. We do not write data to Health Connect. These readings stay in app memory and are not stored in saved history, uploaded, shared, sold, or used for advertising.\\n\\n"
       + "Bluetooth heart-rate readings also stay in memory. Bluetooth collection stops when the app enters the background.\\n\\n"

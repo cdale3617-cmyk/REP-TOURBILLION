@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "DRC Golf Tourbillion",
+    "name": "DRC Golf Tempo",
     "slug": "drc-golf-tourbillion",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#071A18"
+      "backgroundColor": "#11151B"
     },
     "ios": {
       "supportsTablet": false
@@ -52,7 +52,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow DRC Golf Tourbillion to record your swing and shot videos.",
+          "cameraPermission": "Allow DRC Golf Tempo to record your swing and shot videos.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
@@ -60,14 +60,14 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow DRC Golf Tourbillion to calculate live GPS distances and find nearby courses."
+          "locationWhenInUsePermission": "Allow DRC Golf Tempo to calculate live GPS distances and find nearby courses."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow DRC Golf Tourbillion to choose swing videos and green photos.",
-          "cameraPermission": "Allow DRC Golf Tourbillion to capture green photos.",
+          "photosPermission": "Allow DRC Golf Tempo to choose swing videos and green photos.",
+          "cameraPermission": "Allow DRC Golf Tempo to capture green photos.",
           "microphonePermission": false
         }
       ],

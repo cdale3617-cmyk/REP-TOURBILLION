@@ -316,7 +316,7 @@ export default function ToolScreen() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          ...(Platform.OS !== 'web' ? { 'User-Agent': 'DRC-Golf-Tourbillion/1.0 (on-demand nearby golf course lookup)' } : {}),
+          ...(Platform.OS !== 'web' ? { 'User-Agent': 'DRC-Golf-Tempo/1.0 (on-demand nearby golf course lookup)' } : {}),
         },
         body: `data=${encodeURIComponent(query)}`,
         signal: controller.signal,

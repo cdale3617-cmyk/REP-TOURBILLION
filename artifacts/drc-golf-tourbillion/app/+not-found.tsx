@@ -14,7 +14,7 @@ export default function NotFoundScreen() {
           <View style={[styles.mark, { backgroundColor: colors.secondary, borderColor: colors.emerald }]}>
             <Feather name="compass" size={21} color={colors.emerald} />
           </View>
-          <Text style={[styles.eyebrow, { color: colors.primary }]}>DRC · FIELD NOTES</Text>
+          <Text style={[styles.eyebrow, { color: colors.primary }]}>DRC GOLF TEMPO</Text>
           <Text style={[styles.title, { color: colors.foreground }]}>This screen doesn&apos;t exist.</Text>
           <Link href="/" style={[styles.link, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
             <Text style={[styles.linkText, { color: colors.secondaryForeground }]}>Go to home screen!</Text>

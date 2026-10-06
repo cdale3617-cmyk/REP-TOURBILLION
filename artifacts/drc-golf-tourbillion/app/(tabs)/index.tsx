@@ -68,14 +68,14 @@ export default function HomeScreen() {
   return (
     <Page>
       <AntiGlareButton />
-      <View style={[styles.brandRow, { borderColor: colors.rim, backgroundColor: colors.surfaceRaised, boxShadow: `0px 6px 14px ${colors.shadow}` }]}>
+      <View accessibilityRole="header" accessible accessibilityLabel="DRC Golf Tempo" style={[styles.brandRow, { borderColor: colors.rim, backgroundColor: colors.surfaceRaised, boxShadow: `0px 6px 14px ${colors.shadow}` }]}>
         <View style={[styles.brandTrim, { backgroundColor: colors.primary, pointerEvents: 'none' }]} />
         <View style={[styles.logo, { borderColor: colors.primary, backgroundColor: colors.card }]}>
           <Image source={require('@/assets/images/icon.png')} style={styles.logoImage} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.brand, { color: colors.primary }]}>DRC</Text>
-          <Text style={[styles.brandSub, { color: colors.mutedForeground }]}>GOLF TOURBILLION · FIELD NOTES</Text>
+          <Text style={[styles.brandSub, { color: colors.mutedForeground }]}>GOLF TEMPO</Text>
         </View>
         <View style={[styles.statusDot, { backgroundColor: colors.emerald, borderColor: colors.rim }]} />
       </View>
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   logo: { width: 50, height: 50, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 1 },
   logoImage: { width: 46, height: 46, borderRadius: 14 },
   brand: { fontSize: 39, lineHeight: 45, fontFamily: 'serif', fontWeight: '700', letterSpacing: 2.1, includeFontPadding: false },
-  brandSub: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_700Bold', letterSpacing: 0.55, marginTop: 1, flexShrink: 1 },
+  brandSub: { fontSize: 16, lineHeight: 22, fontFamily: 'Inter_700Bold', letterSpacing: 1.6, marginTop: 1, flexShrink: 1 },
   statusDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1, marginHorizontal: 2 },
   welcomeRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingTop: 4, paddingBottom: 3 },
   kicker: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_700Bold', letterSpacing: 0.85, marginBottom: 7 },

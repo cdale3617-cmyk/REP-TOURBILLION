@@ -133,3 +133,26 @@ test('anti-glare off restores the new palette', () => {
   assert.equal(off.primary, '#BEC7D3');
   assert.notEqual(resolveColors('dark', true).background, off.background);
 });
+
+test('Tempo branding preserves installed-app identity and existing backup format', () => {
+  const project = path.resolve(__dirname, '..');
+  const config = JSON.parse(fs.readFileSync(path.join(project, 'app.json'), 'utf8')).expo;
+  assert.equal(config.name, 'DRC Golf Tempo');
+  assert.equal(config.splash.backgroundColor, '#11151B');
+  assert.equal(config.android.package, 'com.drc.golftourbillion');
+  assert.equal(config.slug, 'drc-golf-tourbillion');
+  assert.equal(config.scheme, 'drc-golf-tourbillion');
+  const pluginOptions = config.plugins.filter(Array.isArray).map(([, options]) => options);
+  for (const options of pluginOptions) {
+    for (const [key, value] of Object.entries(options)) {
+      if (key.endsWith('Permission') && typeof value === 'string') assert.ok(value.includes(config.name));
+    }
+  }
+  const backupSource = fs.readFileSync(path.join(project, 'utils/backup.ts'), 'utf8');
+  assert.ok(backupSource.includes("app: 'DRC Golf Tourbillion'"), 'stable backup export marker');
+  assert.ok(backupSource.includes("z.literal('DRC Golf Tourbillion')"), 'older backups still accepted');
+  const homeSource = fs.readFileSync(path.join(project, 'app/(tabs)/index.tsx'), 'utf8');
+  assert.ok(homeSource.includes('>GOLF TEMPO</Text>'));
+  assert.ok(!homeSource.includes('Your choice'), 'delegation is not heading text');
+  assert.ok(fs.readFileSync(path.join(project, 'plugins/withHealthPrivacy.js'), 'utf8').includes('DRC Golf Tempo — Health privacy'));
+});

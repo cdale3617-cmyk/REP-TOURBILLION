@@ -1,4 +1,4 @@
-# Android build and installation handoff
+# DRC Golf Tempo — Android build and installation handoff
 
 ## Current status
 
@@ -17,7 +17,7 @@ positioning and mapped course update work are handled separately.
 
 The user uses a Samsung Galaxy Watch and has selected Samsung Health as the
 health-data source. The intended connection is Galaxy Watch → Samsung Health
-on the S24 Ultra → Android Health Connect → DRC Golf Tourbillion, with explicit
+on the S24 Ultra → Android Health Connect → DRC Golf Tempo, with explicit
 read permissions. The exact watch model is not needed to select this route.
 Do not require a separate Bluetooth sensor or direct pairing between DRC and
 the watch. Samsung documents this route at
@@ -30,6 +30,8 @@ Samsung account password is needed in DRC.
 ## Build identity and privacy
 
 - Android package: `com.drc.golftourbillion`.
+- Display name: `DRC Golf Tempo`. Technical identifiers and the established backup
+  marker retain their original values to preserve saved data and backup compatibility.
 - App version: `1.0.0`; Android version code: `1`.
 - Keep the package ID and signing identity unchanged for future updates.
 - No account, backend or secrets are needed for the implemented golf features.

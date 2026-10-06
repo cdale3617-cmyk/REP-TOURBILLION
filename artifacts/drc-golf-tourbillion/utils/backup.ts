@@ -106,14 +106,16 @@ export function validateGolfState(input: unknown): GolfState {
 }
 
 export function createBackup(state: GolfState): string {
+  // Keep the established file-format marker after the cosmetic rebrand so
+  // existing backups and older installations remain mutually compatible.
   return JSON.stringify({ app: 'DRC Golf Tourbillion', version: 1, exportedAt: new Date().toISOString(), data: validateGolfState(state) }, null, 2);
 }
 
 export function parseBackup(contents: string): GolfState {
   if (contents.length > 10 * 1024 * 1024) throw new Error('Backup is too large (maximum 10 MB).');
   let input: unknown;
-  try { input = JSON.parse(contents); } catch { throw new Error('Choose a valid DRC Golf Tourbillion JSON backup.'); }
+  try { input = JSON.parse(contents); } catch { throw new Error('Choose a valid DRC Golf Tempo JSON backup.'); }
   const envelope = z.object({ app: z.literal('DRC Golf Tourbillion'), version: z.literal(1), exportedAt: date, data: z.unknown() }).safeParse(input);
-  if (!envelope.success) throw new Error('This is not a supported DRC Golf Tourbillion backup.');
+  if (!envelope.success) throw new Error('This is not a supported DRC Golf Tempo backup.');
   return validateGolfState(envelope.data.data);
 }

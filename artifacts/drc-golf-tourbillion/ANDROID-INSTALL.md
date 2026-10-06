@@ -6,7 +6,10 @@ Target devices: Samsung S24 Ultra phone and Lenovo Idea Pro tablet.
 This Expo project is not an APK. A browser
 preview, Expo Go QR code, and JavaScript export are not standalone installers.
 Replit does not currently provide a direct Android APK export or Google Play
-publishing flow. No installable APK has been produced or signed here.
+publishing flow. The configured GitHub Actions workflow produces a personal
+sideload APK. Building successfully does not establish physical-device
+compatibility; the Samsung layout and native permission checks still require
+device verification.
 
 Native Android Health Connect and standard BLE heart-rate monitor integration
 are implemented, with separate manual measured-reading entry. Physical-device
@@ -32,7 +35,8 @@ Samsung account password is needed in DRC.
 - Android package: `com.drc.golftourbillion`.
 - Display name: `DRC Golf Tempo`. Technical identifiers and the established backup
   marker retain their original values to preserve saved data and backup compatibility.
-- App version: `1.0.0`; Android version code: `1`.
+- App version: `1.0.1`; Android version code: `2`. The More screen displays both
+  values so an installed build can be distinguished from an older download.
 - Keep the package ID and signing identity unchanged for future updates.
 - No account, backend or secrets are needed for the implemented golf features.
 - Android automatic backup is disabled; use explicit golf JSON and video exports.
@@ -95,7 +99,7 @@ Before calling the app ready:
   backup and verify the optional tags survive.
 - Current artwork is approved for the S24 test build: keep the emerald-and-gold
   image in `assets/images/icon.png`. It is used for the Android launcher icon,
-  splash screen, home-screen header mark, and web favicon. The identical
+  splash screen and web favicon; the home heading is text-only. The identical
   `icon_2.png` file is unused. Get user approval before changing this artwork.
 - Complete the checks on both devices. On the Lenovo tablet, also verify all
   tabs, score entry, bag editing, guides, keyboard interactions and video controls

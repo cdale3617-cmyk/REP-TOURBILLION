@@ -35,7 +35,7 @@ Samsung account password is needed in DRC.
 - Android package: `com.drc.golftourbillion`.
 - Display name: `DRC Golf Tempo`. Technical identifiers and the established backup
   marker retain their original values to preserve saved data and backup compatibility.
-- App version: `1.0.2`; Android version code: `3`. The More screen displays both
+- App version: `1.0.3`; Android version code: `4`. The More screen displays both
   values so an installed build can be distinguished from an older download.
 - Keep the package ID and signing identity unchanged for future updates.
 - No account, backend or secrets are needed for the implemented golf features.
@@ -87,7 +87,11 @@ security or install an APK from an unknown sender.
 Before calling the app ready:
 
 - Check the selected charcoal, white and silver palette across all screens and
-  buttons. Keep the approved artwork unchanged.
+  buttons. Keep the approved artwork unchanged. Check the redesigned Home,
+  Round, Bag, Lab, More and shared tool forms for consistent alignment, compact
+  controls, readable contrast and no cut-off labels at the device's actual
+  display/font settings. Primary round GPS, scoring and hole navigation must
+  remain visible above the bottom tabs on short phones and in landscape.
 - Check Anti-glare on Home and Round: white text/dark surfaces when on, the selected
   charcoal/silver palette when off, and the saved setting after a force-stop/reopen.
   Check outdoors.

@@ -15,17 +15,17 @@ export function RoundScoreControls({ score, minimumScore, hole, total, played, b
       <Feather name={icon} size={18} color={colors.primary} />
     </Pressable>;
   return <View testID="round-primary-score" style={{ gap: 4 }}>
-    <View style={styles.row}>
+    <View style={[styles.row, { backgroundColor: colors.muted, borderRadius: 14, padding: 3, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]}>
       {button('previous-hole', 'Previous hole', 'chevron-left', blocked || hole <= 1, () => onHole(hole - 1))}
       {button('score-minus', 'Subtract one stroke', 'minus', score <= minimumScore, () => onScore(Math.max(1, (score || 1) - 1)))}
       <View style={styles.score}>
         <Text style={[styles.number, { color: colors.foreground }]}>{score || '—'}</Text>
-        <Text style={{ fontSize: 10, color: colors.mutedForeground }}>SCORE</Text>
+        <Text style={{ fontSize: 10, letterSpacing: 2, color: colors.mutedForeground }}>SCORE</Text>
       </View>
       {button('score-plus', 'Add one stroke', 'plus', score >= 99, () => onScore(score + 1))}
       {button('next-hole', 'Next hole', 'chevron-right', blocked || hole >= 18, () => onHole(hole + 1))}
     </View>
-    <Text style={{ fontSize: 11, color: colors.mutedForeground, textAlign: 'center' }}>{played}/18 scored · Total {total || '—'}</Text>
+    <Text style={{ fontSize: 11, letterSpacing: 0.6, fontVariant: ['tabular-nums'], color: colors.mutedForeground, textAlign: 'center' }}>{played}/18 scored · Total {total || '—'}</Text>
   </View>;
 }
 
@@ -33,5 +33,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'space-between' },
   button: { width: 44, height: 44, borderWidth: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   score: { minWidth: 32, alignItems: 'center', flex: 1 },
-  number: { fontSize: 24, lineHeight: 28, fontFamily: 'Inter_700Bold', fontVariant: ['tabular-nums'] },
+  number: { fontSize: 30, lineHeight: 34, fontFamily: 'Inter_700Bold', fontVariant: ['tabular-nums'] },
 });

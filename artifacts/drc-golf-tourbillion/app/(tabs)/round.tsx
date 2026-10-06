@@ -20,6 +20,7 @@ import { WindReading } from '@/utils/wind';
 import { HolePerformanceEditor } from '@/components/HolePerformanceEditor';
 import { AntiGlareButton } from '@/components/AntiGlareButton';
 import { AppText as Text } from '@/components/AppText';
+import { Label, StatusToggle } from '@/components/Instrument';
 
 export default function RoundScreen() {
   const colors = useColors();
@@ -34,6 +35,7 @@ export default function RoundScreen() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const { courses, activeRound, lastCourseId, startRound, setCurrentHole, setHoleScore, finishRound, unit, rounds, dailyPins, removeDailyPin, bag, isReady, storageError } = useGolf();
   const { gps, error: gpsError, now, enabled, setEnabled, retry, locating } = useLiveGps();
+  const gpsButtonLabel = gpsError ? 'GPS error' : locating ? 'Finding GPS' : gps ? 'GPS live' : 'Live GPS';
   const course = courses.find((item) => item.id === (activeRound?.courseId ?? lastCourseId));
   const handleWindChange = useCallback((reading: WindReading | null) => {
     if (!course || !reading) {
@@ -63,10 +65,10 @@ export default function RoundScreen() {
 
   return (
     <Page>
-      <PageHeading title={activeRound ? `Hole ${activeRound.currentHole} · Par ${hole?.par ?? '—'}` : 'ROUND'} subtitle={landscape ? undefined : course?.name ?? 'Choose a course to get started'} right={<Pill tone="green">{played}/18</Pill>} />
+      <PageHeading title={activeRound ? `Hole ${activeRound.currentHole} · Par ${hole?.par ?? '—'}` : 'ROUND'} subtitle={landscape ? undefined : course?.name ?? 'Choose a course to get started'} eyebrow={course?.name && !landscape ? undefined : undefined} right={<Pill tone="muted">{played}/18 SCORED</Pill>} />
       {!activeRound ? (
           <Card style={styles.emptyCard}>
-           <Text style={[styles.courseName, { color: colors.foreground }]}>Hole 1{holeGeometry ? ` · Par ${holeGeometry.par}` : ''}</Text>
+           <View style={styles.pair}><Label tone="primary">Hole 1{holeGeometry ? ` · Par ${holeGeometry.par}` : ''}</Label><View style={{ flex: 1 }} /><Label>North up</Label></View>
            <HoleMap geometry={holeGeometry} availableHeight={mapHeight} />
           <View style={styles.emptyCopy}>
              <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>Start to keep score and use live GPS. The map shows the sourced playing path, not a satellite image.</Text>
@@ -76,7 +78,10 @@ export default function RoundScreen() {
             <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>{geometry ? '18 source-checked hole paths available' : 'GPS distances unavailable for this course'}</Text>
           </View>
            <ActionButton title="Start round · hole 1" icon="play" onPress={begin} disabled={!course || !isReady || !!storageError} testID="start-round" />
-           <ActionButton title={enabled ? 'Stop live GPS' : 'Enable live GPS'} icon="crosshair" onPress={() => setEnabled(!enabled)} testID="enable-gps" />
+           <View style={styles.pair}>
+             <View style={styles.pairCell}><StatusToggle testID="enable-gps" label={gpsButtonLabel} active={!!gps} requested={enabled} actionLabel={enabled ? 'Stop live GPS' : 'Enable live GPS'} onPress={() => setEnabled(!enabled)} /></View>
+             <View style={styles.pairCell}><ActionButton title="Choose course" icon="map-pin" secondary onPress={() => router.push('/tool/course-library')} testID="round-choose-course" /></View>
+           </View>
            {gps ? <Text style={[styles.bodySmall, { color: colors.primary }]}>Live position · {gps.latitude.toFixed(5)}, {gps.longitude.toFixed(5)} · ±{gps.accuracy === null ? '?' : Math.round(gps.accuracy)} m</Text> : null}
            {locating ? <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>Finding GPS…</Text> : null}
            {gpsError ? <>
@@ -84,8 +89,7 @@ export default function RoundScreen() {
              <ActionButton title="Retry GPS" onPress={retry} secondary testID="retry-gps" />
              {gpsError.includes('settings') && Platform.OS !== 'web' ? <ActionButton title="Open location settings" onPress={() => void Linking.openSettings()} secondary testID="gps-settings" /> : null}
            </> : null}
-           <ActionButton title="Choose another course" icon="map-pin" secondary onPress={() => router.push('/tool/course-library')} testID="round-choose-course" />
-          <ActionButton title="Round Performance Coach" icon="trending-up" secondary onPress={() => router.push('/tool/score-comparison')} testID="open-round-coach" />
+           <ActionButton title="Round Performance Coach" icon="trending-up" secondary onPress={() => router.push('/tool/score-comparison')} testID="open-round-coach" />
           {rounds.length > 0 ? <Text style={[styles.lastRound, { color: colors.mutedForeground }]}>Last saved card · {rounds[0].holes.filter((item) => item.score !== null).length} holes recorded</Text> : null}
         </Card>
       ) : (
@@ -93,7 +97,7 @@ export default function RoundScreen() {
           <Card style={styles.roundCard}>
              {!landscape ? <View style={styles.courseRow}>
               <View style={{ flex: 1 }}>
-                 <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>GREEN REFERENCE · NORTH UP</Text>
+                 <Label>Green reference · north up</Label>
               </View>
              </View> : null}
             {holeMapLayout.sideBySide ? (
@@ -102,11 +106,13 @@ export default function RoundScreen() {
                    <HoleMap geometry={holeGeometry} position={gpsDistance !== null ? gps : null} dailyPin={dailyPin} wind={currentWind} availableHeight={mapHeight} />
                 </View>
                 <View style={styles.splitHoleDistance}>
-                   <Text style={[styles.micro, { color: colors.mutedForeground }]}>GREEN REFERENCE DISTANCE</Text>
-                   <View style={styles.mapFooter}>
-                     <Text style={[styles.distance, { color: colors.foreground }]}>{displayDistance !== null ? `${displayDistance}` : '—'}<Text style={[styles.unit, { color: colors.mutedForeground }]}> {unit}</Text></Text>
-                     <ActionButton title={enabled ? 'Stop GPS' : 'Live GPS'} icon="crosshair" onPress={() => setEnabled(!enabled)} testID="enable-gps" />
-                  </View>
+                   <View style={[styles.readout, { borderColor: colors.border, backgroundColor: colors.muted }]}>
+                     <View style={{ flex: 1, minWidth: 0 }}>
+                       <Label>To green reference</Label>
+                       <Text style={[styles.distance, { color: colors.foreground }]}>{displayDistance !== null ? `${displayDistance}` : '—'}<Text style={[styles.unit, { color: colors.mutedForeground }]}> {unit}</Text></Text>
+                     </View>
+                     <StatusToggle testID="enable-gps" label={gpsButtonLabel} active={!!gps} requested={enabled} actionLabel={enabled ? 'Stop live GPS' : 'Enable live GPS'} onPress={() => setEnabled(!enabled)} compact />
+                   </View>
                    <Text numberOfLines={1} style={[styles.micro, { color: colors.mutedForeground }]}>{gps ? `Live GPS · ±${gps.accuracy === null ? '?' : Math.round(gps.accuracy)} m${!holeGeometry ? ' · No mapped green' : ''}` : locating ? 'Finding GPS…' : enabled ? 'GPS needs attention' : 'Tap Live GPS to start'}</Text>
                    <RoundScoreControls score={score} minimumScore={minimumScore} hole={activeRound.currentHole} total={total} played={played} blocked={statsDirty || !isReady}
                      onScore={(nextScore) => setHoleScore(activeRound.currentHole, nextScore)} onHole={setCurrentHole} />
@@ -115,14 +121,12 @@ export default function RoundScreen() {
             ) : (
               <>
                  <HoleMap geometry={holeGeometry} position={gpsDistance !== null ? gps : null} dailyPin={dailyPin} wind={currentWind} availableHeight={mapHeight} />
-                <View style={styles.mapFooter}>
-                  <View>
-                    <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>GREEN REFERENCE DISTANCE</Text>
+                <View style={[styles.readout, { borderColor: colors.border, backgroundColor: colors.muted }]}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Label>To green reference</Label>
                     <Text style={[styles.distance, { color: colors.foreground }]}>{displayDistance !== null ? `${displayDistance}` : '—'}<Text style={[styles.unit, { color: colors.mutedForeground }]}> {unit}</Text></Text>
                   </View>
-                  <View style={{ alignItems: 'flex-end', gap: 7 }}>
-                     <ActionButton title={enabled ? 'Stop GPS' : 'Live GPS'} icon="crosshair" onPress={() => setEnabled(!enabled)} testID="enable-gps" />
-                  </View>
+                  <StatusToggle testID="enable-gps" label={gpsButtonLabel} active={!!gps} requested={enabled} actionLabel={enabled ? 'Stop live GPS' : 'Enable live GPS'} onPress={() => setEnabled(!enabled)} compact />
                 </View>
                  <Text numberOfLines={1} style={[styles.micro, { color: colors.mutedForeground }]}>{gps
                    ? `Live GPS · ±${gps.accuracy === null ? '?' : Math.round(gps.accuracy)} m${!holeGeometry ? ' · No mapped green' : ''}`
@@ -204,6 +208,9 @@ export default function RoundScreen() {
 }
 
 const styles = StyleSheet.create({
+  pair: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  pairCell: { flex: 1, minWidth: 0 },
+  readout: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 },
   roundCard: { gap: 9, padding: 10 },
   detailsToggle: { minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   courseRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -217,7 +224,7 @@ const styles = StyleSheet.create({
   bodySmall: { fontSize: 12, lineHeight: 18, fontFamily: 'Inter_500Medium', letterSpacing: 0.2 },
   micro: { fontSize: 12, lineHeight: 16, fontFamily: 'Inter_400Regular' },
   mapFooter: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', alignItems: 'center' },
-  distance: { fontSize: 28, lineHeight: 34, fontFamily: 'Inter_700Bold', marginTop: 3, fontVariant: ['tabular-nums'], letterSpacing: -0.8 },
+  distance: { fontSize: 30, lineHeight: 34, fontFamily: 'Inter_700Bold', marginTop: 0, fontVariant: ['tabular-nums'], letterSpacing: -0.5 },
   unit: { fontSize: 14, fontFamily: 'Inter_500Medium' },
   permissionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   adviceCard: { gap: 10, borderLeftWidth: 2 },

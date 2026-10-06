@@ -50,7 +50,7 @@ function NumberField({ testID, label, shown, onValid, validate, error }: {
 function Tile({ club, unit, selected, onSelect, onStep }: { club: Club; unit: Unit; selected: boolean; onSelect: () => void; onStep: (d: number) => void }) {
   const colors = useColors();
   return (
-    <View style={[styles.tile, { backgroundColor: colors.card, borderColor: selected ? colors.primary : colors.border, borderWidth: selected ? 2 : 1 }]}>
+    <View style={[styles.tile, { backgroundColor: colors.card, borderColor: selected ? colors.primary : colors.border, borderWidth: selected ? 1.5 : StyleSheet.hairlineWidth }]}>
       <Pressable
         testID={`bag-tile-${club.id}`}
         accessibilityRole="button"
@@ -112,10 +112,10 @@ export default function BagScreen() {
 
   return (
     <Page>
-      <PageHeading eyebrow="Equipment" title="BAG" />
+      <PageHeading eyebrow="Equipment" title="BAG" right={<Text style={[styles.count, { color: colors.foreground }]}>{bag.length}<Text style={[styles.countUnit, { color: colors.mutedForeground }]}> CLUBS</Text></Text>} />
       <Card style={styles.summary}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.summaryTitle, { color: colors.foreground }]}>{bag.length} clubs</Text>
+          <Text style={[styles.summaryTitle, { color: colors.foreground }]}>Carry distances</Text>
           <Text style={[styles.summarySub, { color: colors.mutedForeground }]}>Changes save automatically</Text>
         </View>
         <View style={[styles.segment, { backgroundColor: colors.muted }]}>
@@ -209,15 +209,17 @@ export default function BagScreen() {
 }
 
 const styles = StyleSheet.create({
+  count: { fontSize: 22, lineHeight: 28, fontFamily: 'Inter_700Bold', fontVariant: ['tabular-nums'] },
+  countUnit: { fontSize: 11, letterSpacing: 1.4 },
   summary: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 14 },
   summaryTitle: { fontSize: 16, lineHeight: 22, fontFamily: 'Inter_700Bold' },
   summarySub: { fontSize: 13, lineHeight: 18, fontFamily: 'Inter_400Regular', flexShrink: 1 },
-  segment: { borderRadius: 12, padding: 3, flexDirection: 'row' },
-  unitButton: { borderRadius: 9, minWidth: 42, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
+  segment: { borderRadius: 10, borderWidth: StyleSheet.hairlineWidth, borderColor: '#46505D', padding: 3, flexDirection: 'row' },
+  unitButton: { borderRadius: 7, minWidth: 42, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
   unitText: { fontSize: 13, lineHeight: 18, fontFamily: 'Inter_700Bold', letterSpacing: 0.3 },
   grid: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
   col: { flex: 1, minWidth: 0, gap: 8 },
-  tile: { borderRadius: 12, padding: 6, gap: 4, minWidth: 0, flexDirection: 'row', alignItems: 'center', minHeight: 78 },
+  tile: { borderRadius: 10, padding: 6, gap: 4, minWidth: 0, flexDirection: 'row', alignItems: 'center', minHeight: 78 },
   tileSelect: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 60 },
   tileInfo: { flex: 1, minWidth: 0, gap: 3 },
   tileName: { minWidth: 0, fontSize: 12, lineHeight: 17, fontFamily: 'Inter_600SemiBold' },
@@ -225,17 +227,17 @@ const styles = StyleSheet.create({
   step: { width: 30, height: 30, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   tileDist: { minWidth: 0, fontSize: 17, lineHeight: 22, fontFamily: 'Inter_700Bold' },
   tileUnit: { fontSize: 11, fontFamily: 'Inter_500Medium' },
-  clubCard: { padding: 14, gap: 14 },
+  clubCard: { padding: 14, gap: 12 },
   clubHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   clubName: { flex: 1, minWidth: 0, minHeight: 40, borderBottomWidth: 1, fontSize: 15, fontFamily: 'Inter_600SemiBold', paddingVertical: 5 },
   finish: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   finishText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   makeModelRow: { flexDirection: 'row', gap: 12 },
   makeModelField: { flex: 1, minWidth: 0 },
-  detailInput: { minHeight: 42, borderBottomWidth: 1, fontSize: 15, lineHeight: 21, fontFamily: 'Inter_500Medium', paddingVertical: 6 },
+  detailInput: { minHeight: 44, borderWidth: StyleSheet.hairlineWidth, borderRadius: 8, paddingHorizontal: 10, backgroundColor: 'rgba(255,255,255,0.03)', fontSize: 15, lineHeight: 21, fontFamily: 'Inter_500Medium', paddingVertical: 6, marginTop: 4 },
   inputsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   inputBox: { flex: 1, minWidth: 0 },
-  inputLabel: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.35 },
+  inputLabel: { fontSize: 11, lineHeight: 16, fontFamily: 'Inter_700Bold', letterSpacing: 1.2 },
   numeric: { fontSize: 21, lineHeight: 27, fontFamily: 'Inter_600SemiBold', paddingTop: 4, minWidth: 0, width: '100%', borderBottomWidth: 1 },
   err: { fontSize: 11, lineHeight: 15, fontFamily: 'Inter_500Medium' },
   inputDivider: { width: 1, height: 38, marginTop: 4 },

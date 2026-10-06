@@ -34,7 +34,7 @@ export function ExpandablePanel({ title, subtitle, icon, defaultOpen = false, te
         onPress={() => setOpen((v) => !v)}
         style={({ pressed }) => [styles.head, { opacity: pressed ? 0.75 : 1 }]}
       >
-        {icon ? <Feather name={icon} size={17} color={colors.primary} /> : null}
+        {icon ? <View style={[styles.well, { borderColor: colors.border, backgroundColor: colors.muted }]}><Feather name={icon} size={16} color={colors.primary} /></View> : null}
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
           {subtitle ? <Text numberOfLines={1} style={[styles.sub, { color: colors.mutedForeground }]}>{subtitle}</Text> : null}
@@ -47,9 +47,10 @@ export function ExpandablePanel({ title, subtitle, icon, defaultOpen = false, te
 }
 
 const styles = StyleSheet.create({
-  wrap: { borderWidth: 1, borderRadius: 14, overflow: 'hidden' },
+  wrap: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, overflow: 'hidden' },
   head: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 8 },
-  title: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_700Bold' },
+  well: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 14, letterSpacing: 0.3, lineHeight: 20, fontFamily: 'Inter_700Bold' },
   sub: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_500Medium' },
   body: { paddingHorizontal: 8, paddingBottom: 8, gap: 8 },
 });

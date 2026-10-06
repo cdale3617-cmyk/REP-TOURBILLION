@@ -39,11 +39,11 @@ function ClassicTabLayout() {
       headerShown: false,
       tabBarActiveTintColor: colors.primary,
       tabBarInactiveTintColor: colors.mutedForeground,
-      tabBarLabelStyle: { fontSize: 11, fontFamily: 'Inter_700Bold', letterSpacing: 0.5, marginTop: 2 },
+      tabBarLabelStyle: { fontSize: 11, fontFamily: 'Inter_700Bold', letterSpacing: 1.2, marginTop: 2 },
       tabBarStyle: {
         position: 'absolute',
         backgroundColor: isIOS ? 'transparent' : colors.card,
-        borderTopWidth: 1,
+        borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: colors.rim,
         elevation: 0,
         height: isWeb ? 84 : 62 + insets.bottom,

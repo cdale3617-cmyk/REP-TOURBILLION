@@ -129,7 +129,7 @@ export function CaddieAssistant(props: CaddieAdviceContext) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.answerBox, { borderColor: colors.border, backgroundColor: colors.background }]}>
+      <View style={[styles.answerBox, { borderColor: colors.border, borderLeftColor: colors.primary, backgroundColor: colors.background }]}>
         <Text testID="caddie-answer" accessibilityLiveRegion="polite" style={[styles.answer, { color: colors.foreground }]}>{answer}</Text>
         <View style={styles.answerFooter}>
           <Text style={[styles.modeLabel, { color: colors.mutedForeground }]}>OFFLINE ADVICE</Text>
@@ -210,24 +210,24 @@ export function CaddieAssistant(props: CaddieAdviceContext) {
 }
 
 const styles = StyleSheet.create({
-  disclosure: { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
+  disclosure: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, overflow: 'hidden' },
   disclosureHead: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8 },
-  disclosureTitle: { fontSize: 13, lineHeight: 20, fontFamily: 'Inter_700Bold' },
+  disclosureTitle: { fontSize: 13, letterSpacing: 0.3, lineHeight: 20, fontFamily: 'Inter_700Bold' },
   disclosureBody: { gap: 9, paddingHorizontal: 12, paddingBottom: 12 },
   limitRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   troubleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  troubleButton: { minHeight: 44, paddingHorizontal: 9, justifyContent: 'center', borderWidth: 1, borderRadius: 10 },
+  troubleButton: { minHeight: 44, paddingHorizontal: 10, justifyContent: 'center', borderWidth: 1, borderRadius: 8 },
   recordButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6 },
   container: { gap: 8, minWidth: 0 },
-  answerBox: { borderWidth: 1, borderRadius: 12, padding: 11, gap: 8 },
+  answerBox: { borderWidth: StyleSheet.hairlineWidth, borderLeftWidth: 3, borderRadius: 10, padding: 12, gap: 8 },
   answer: { fontSize: 14, lineHeight: 21, fontFamily: 'Inter_400Regular' },
   answerFooter: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  modeLabel: { fontSize: 12, lineHeight: 16, fontFamily: 'Inter_700Bold', letterSpacing: 0.7 },
-  speechButton: { minHeight: 44, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  modeLabel: { fontSize: 11, lineHeight: 15, fontFamily: 'Inter_700Bold', letterSpacing: 1.4 },
+  speechButton: { minHeight: 44, borderWidth: StyleSheet.hairlineWidth, borderRadius: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   speechLabel: { fontSize: 13, lineHeight: 18, fontFamily: 'Inter_600SemiBold' },
-  inputRow: { minHeight: 60, borderWidth: 1, borderRadius: 13, padding: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  inputRow: { minHeight: 60, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, padding: 6, flexDirection: 'row', alignItems: 'center', gap: 7 },
   input: { flex: 1, minHeight: 44, maxHeight: 120, fontSize: 15, lineHeight: 21, paddingHorizontal: 8, paddingVertical: 8, fontFamily: 'Inter_400Regular' },
-  sendButton: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  sendButton: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   disclaimer: { fontSize: 12, lineHeight: 18, fontFamily: 'Inter_400Regular' },
   error: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_500Medium' },
 });

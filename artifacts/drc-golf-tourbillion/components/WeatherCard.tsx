@@ -64,7 +64,7 @@ export function WeatherCard({ latitude, longitude, onWindChange }: {
           <Text style={[styles.heading, { color: colors.foreground }]}>COURSE WEATHER</Text>
           <Text style={[styles.sub, { color: colors.mutedForeground }]}>Open-Meteo · current course-area conditions</Text>
         </View>
-        <Pressable onPress={() => void load()} accessibilityRole="button" accessibilityLabel="Refresh weather" testID="weather-refresh">
+        <Pressable onPress={() => void load()} accessibilityRole="button" accessibilityLabel="Refresh weather" testID="weather-refresh" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -8 }}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Feather name="refresh-cw" size={16} color={colors.mutedForeground} />}
         </Pressable>
       </View>
@@ -89,14 +89,14 @@ export function WeatherCard({ latitude, longitude, onWindChange }: {
 }
 
 const styles = StyleSheet.create({
-  card: { padding: 15, gap: 14 },
+  card: { padding: 12, gap: 10 },
   top: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  icon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  heading: { fontSize: 13, lineHeight: 18, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
-  sub: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_400Regular', marginTop: 3, flexShrink: 1 },
+  icon: { width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth },
+  heading: { fontSize: 11, lineHeight: 15, fontFamily: 'Inter_700Bold', letterSpacing: 1.6 },
+  sub: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_400Regular', marginTop: 1, flexShrink: 1 },
   row: { flexDirection: 'row', alignItems: 'center' },
-  temp: { fontSize: 34, lineHeight: 40, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
+  temp: { fontSize: 32, lineHeight: 36, fontFamily: 'Inter_700Bold', letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   condition: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_400Regular' },
-  wind: { flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderRadius: 12, paddingHorizontal: 11, paddingVertical: 9 },
+  wind: { flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: StyleSheet.hairlineWidth, borderRadius: 8, paddingHorizontal: 11, paddingVertical: 9 },
   windText: { fontSize: 14, lineHeight: 19, fontFamily: 'Inter_600SemiBold' },
 });

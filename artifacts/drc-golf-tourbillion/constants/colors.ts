@@ -4,77 +4,74 @@
  * These tokens mirror the naming conventions used in web artifacts (index.css)
  * so that multi-artifact projects share a cohesive visual identity.
  *
- * Replace the placeholder values below with values that match the project's
- * brand. If a sibling web artifact exists, read its index.css and convert the
- * HSL values to hex so both artifacts use the same palette.
- *
- * To add dark mode, add a `dark` key with the same token names.
- * The useColors() hook will automatically pick it up.
+ * Charcoal, white and silver palette (user-selected). The app deliberately
+ * uses the same dark palette for both device schemes; `emerald` is a legacy
+ * token name that now resolves to silver.
  */
 
 const colors = {
   light: {
-    text: '#F4F0E5',
-    tint: '#E0BD68',
-    background: '#06130F',
-    foreground: '#F4F0E5',
-    card: '#0D241D',
-    cardForeground: '#F4F0E5',
-    primary: '#E0BD68',
-    primaryForeground: '#0B1A14',
-    secondary: '#16412F',
-    secondaryForeground: '#E2F1E4',
-    muted: '#102C23',
-    mutedForeground: '#BDCDC1',
-    accent: '#C99D54',
-    accentForeground: '#10211D',
-    destructive: '#C9725C',
-    destructiveForeground: '#FFF7EF',
+    text: '#F4F6FA',
+    tint: '#BEC7D3',
+    background: '#11151B',
+    foreground: '#F4F6FA',
+    card: '#1A2029',
+    cardForeground: '#F4F6FA',
+    primary: '#BEC7D3',
+    primaryForeground: '#11151B',
+    secondary: '#2E3743',
+    secondaryForeground: '#F4F6FA',
+    muted: '#1D242D',
+    mutedForeground: '#BEC7D3',
+    accent: '#A9B3C1',
+    accentForeground: '#11151B',
+    destructive: '#E0806C',
+    destructiveForeground: '#11151B',
     overlay: 'rgba(0,0,0,0.62)',
     shadow: 'rgba(0,0,0,0.46)',
-    border: '#385A48',
-    input: '#416850',
-    emerald: '#49A875',
-    surfaceRaised: '#16382A',
-    rim: '#8B7544',
-    mapBase: '#102C27',
-    mapContour: '#22443A',
-    mapRough: '#47724F',
-    mapFairway: '#61885B',
-    mapOuterGreen: '#82946A',
-    mapGreen: '#A9AD77',
+    border: '#3C4552',
+    input: '#566171',
+    emerald: '#BEC7D3',
+    surfaceRaised: '#242B35',
+    rim: '#7C8795',
+    mapBase: '#161B22',
+    mapContour: '#2C3440',
+    mapRough: '#4A5360',
+    mapFairway: '#6B7684',
+    mapOuterGreen: '#98A2B0',
+    mapGreen: '#D5DBE4',
   },
 
   dark: {
-    text: '#F4F0E5',
-    tint: '#E0BD68',
-    background: '#06130F',
-    foreground: '#F4F0E5',
-    card: '#0D241D',
-    cardForeground: '#F4F0E5',
-    primary: '#E0BD68',
-    primaryForeground: '#0B1A14',
-    secondary: '#16412F',
-    secondaryForeground: '#E2F1E4',
-    muted: '#102C23',
-    mutedForeground: '#BDCDC1',
-    accent: '#C99D54',
-    accentForeground: '#10211D',
-    destructive: '#C9725C',
-    destructiveForeground: '#FFF7EF',
+    text: '#F4F6FA',
+    tint: '#BEC7D3',
+    background: '#11151B',
+    foreground: '#F4F6FA',
+    card: '#1A2029',
+    cardForeground: '#F4F6FA',
+    primary: '#BEC7D3',
+    primaryForeground: '#11151B',
+    secondary: '#2E3743',
+    secondaryForeground: '#F4F6FA',
+    muted: '#1D242D',
+    mutedForeground: '#BEC7D3',
+    accent: '#A9B3C1',
+    accentForeground: '#11151B',
+    destructive: '#E0806C',
+    destructiveForeground: '#11151B',
     overlay: 'rgba(0,0,0,0.62)',
     shadow: 'rgba(0,0,0,0.46)',
-    border: '#385A48',
-    input: '#416850',
-    emerald: '#49A875',
-    surfaceRaised: '#16382A',
-    rim: '#8B7544',
-    mapBase: '#102C27',
-    mapContour: '#22443A',
-    mapRough: '#47724F',
-    mapFairway: '#61885B',
-    mapOuterGreen: '#82946A',
-    mapGreen: '#A9AD77',
+    border: '#3C4552',
+    input: '#566171',
+    emerald: '#BEC7D3',
+    surfaceRaised: '#242B35',
+    rim: '#7C8795',
+    mapBase: '#161B22',
+    mapContour: '#2C3440',
+    mapRough: '#4A5360',
+    mapFairway: '#6B7684',
+    mapOuterGreen: '#98A2B0',
+    mapGreen: '#D5DBE4',
   },
 
   // Border radius (in px). Sync from the sibling web artifact's --radius
@@ -82,7 +79,7 @@ const colors = {
   radius: 18,
 };
 
-// Preserve the approved artwork/theme when off; the optional display mode
+// Preserve the selected charcoal/white/silver theme when off; the optional display mode
 // changes UI surfaces and text only, not course geometry or saved golf data.
 export const antiGlareColors = {
   ...colors.dark,

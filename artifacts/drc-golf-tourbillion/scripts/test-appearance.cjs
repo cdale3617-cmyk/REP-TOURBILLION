@@ -101,3 +101,35 @@ test('invalid stored appearance is not silently overwritten and can be explicitl
   assert.equal(session.render().antiGlare, true);
   assert.equal(session.render().error, '');
 });
+
+const ratio = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+
+test('selected charcoal, white and silver palette is applied with readable contrast', () => {
+  for (const scheme of ['light', 'dark', null]) {
+    const c = resolveColors(scheme, false);
+    assert.equal(c.background, '#11151B');
+    assert.equal(c.surfaceRaised, '#242B35');
+    assert.equal(c.foreground, '#F4F6FA');
+    assert.equal(c.primary, '#BEC7D3');
+    assert.equal(c.emerald, '#BEC7D3');
+    assert.equal(c.primaryFill, '#BEC7D3');
+    assert.ok(ratio(c.primary, c.primaryForeground) >= 7, 'silver button text');
+    assert.ok(ratio(c.accent, c.accentForeground) >= 7, 'accent button text');
+    for (const surface of ['background', 'card', 'surfaceRaised', 'muted']) {
+      assert.ok(ratio(c.foreground, c[surface]) >= 7, surface + ' text');
+      assert.ok(ratio(c.mutedForeground, c[surface]) >= 7, surface + ' muted text');
+    }
+    assert.ok(ratio(c.destructive, c.background) >= 4.5, 'error colour');
+    const map = ['mapBase', 'mapContour', 'mapRough', 'mapFairway', 'mapOuterGreen', 'mapGreen'].map(k => c[k]);
+    assert.equal(new Set(map).size, map.length, 'distinct map tones');
+    const json = JSON.stringify(c).toUpperCase();
+    for (const old of ['#E0BD68', '#06130F', '#49A875', '#16412F']) assert.ok(!json.includes(old));
+  }
+});
+
+test('anti-glare off restores the new palette', () => {
+  const off = resolveColors('dark', false);
+  assert.equal(off.background, '#11151B');
+  assert.equal(off.primary, '#BEC7D3');
+  assert.notEqual(resolveColors('dark', true).background, off.background);
+});

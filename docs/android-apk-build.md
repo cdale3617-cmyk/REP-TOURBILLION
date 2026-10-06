@@ -36,6 +36,10 @@ can request the build through GitHub Actions.
 
 ## Scope and signing
 
+The normal screen/button palette is the user-selected charcoal, white and silver.
+The approved artwork remains unchanged. Anti-glare is still a separate saved
+display option; switching it off restores the charcoal/silver palette.
+
 This is a **personal sideload/testing installer**, signed with Expo's generated
 test keystore. It is not signed with a private production key and is not a
 Google Play release. The release variant includes its JavaScript, so it does

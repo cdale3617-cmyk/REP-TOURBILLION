@@ -80,8 +80,11 @@ security or install an APK from an unknown sender.
 
 Before calling the app ready:
 
-- Check Anti-glare on Home and Round: white text/dark surfaces when on, original
-  colours when off, and the saved setting after a force-stop/reopen. Check outdoors.
+- Check the selected charcoal, white and silver palette across all screens and
+  buttons. Keep the approved artwork unchanged.
+- Check Anti-glare on Home and Round: white text/dark surfaces when on, the selected
+  charcoal/silver palette when off, and the saved setting after a force-stop/reopen.
+  Check outdoors.
 - In Shot Pattern, record known lie/situation, grass/mat surface and relative wind
   tags. Confirm Caddie only compares at least five matching records per club,
   does not treat untagged legacy records as known matches, and blocks conflicting

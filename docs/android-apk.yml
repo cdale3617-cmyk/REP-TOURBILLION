@@ -1,0 +1,129 @@
+name: Build DRC Golf Android APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CI: "1"
+      EXPO_NO_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check Android configuration and permissions
+        run: node artifacts/drc-golf-tourbillion/scripts/check-android.cjs
+
+      - name: Check app behavior and types before building
+        run: |
+          pnpm --filter @workspace/drc-golf-tourbillion run test
+          pnpm --filter @workspace/drc-golf-tourbillion run typecheck
+          cd artifacts/drc-golf-tourbillion
+          pnpm exec expo install --check
+
+      - name: Generate the native Android project
+        working-directory: artifacts/drc-golf-tourbillion
+        run: pnpm exec expo prebuild --platform android --no-install --skip-dependency-update react,react-native
+
+      - name: Verify the generated manifest
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse("artifacts/drc-golf-tourbillion/android/app/src/main/AndroidManifest.xml").getroot()
+          android = "{http://schemas.android.com/apk/res/android}"
+          tools = "{http://schemas.android.com/tools}"
+          app = root.find("application")
+          assert app.get(android + "allowBackup") == "false", "Automatic backup must be disabled"
+          permissions = {}
+          for item in root.findall("uses-permission"):
+              permissions.setdefault(item.get(android + "name"), []).append(item)
+          for name in ["CAMERA", "ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION",
+                       "health.READ_HEART_RATE", "health.READ_OXYGEN_SATURATION", "BLUETOOTH_CONNECT"]:
+              assert any(p.get(tools + "node") != "remove" for p in permissions.get("android.permission." + name, [])), name
+          for name in ["RECORD_AUDIO", "SYSTEM_ALERT_WINDOW", "ACCESS_BACKGROUND_LOCATION",
+                       "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "READ_MEDIA_IMAGES",
+                       "READ_MEDIA_VIDEO", "READ_MEDIA_VISUAL_USER_SELECTED"]:
+              rows = permissions.get("android.permission." + name, [])
+              assert rows and all(p.get(tools + "node") == "remove" for p in rows), name
+          scan = permissions.get("android.permission.BLUETOOTH_SCAN", [])
+          assert scan and all("neverForLocation" in p.get(android + "usesPermissionFlags", "") for p in scan)
+          alias = next(a for a in app.findall("activity-alias") if a.get(android + "name") == "ViewPermissionUsageActivity")
+          assert alias.get(android + "targetActivity") == ".HealthPrivacyActivity"
+          assert alias.get(android + "permission") == "android.permission.START_VIEW_PERMISSION_USAGE"
+          print("Generated native manifest privacy checks passed.")
+          PY
+
+      - name: Build a standalone release-variant APK
+        working-directory: artifacts/drc-golf-tourbillion/android
+        # Expo's generated test keystore signs this personal sideload build.
+        # The release variant embeds JavaScript and does not require Metro.
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Verify APK signature, package and embedded bundle
+        run: |
+          set -euo pipefail
+          apk=artifacts/drc-golf-tourbillion/android/app/build/outputs/apk/release/app-release.apk
+          test -s "$apk"
+          tools_dir=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          "$tools_dir/apksigner" verify --verbose "$apk"
+          "$tools_dir/aapt" dump badging "$apk" > /tmp/apk-badging.txt
+          grep -F "name='com.drc.golftourbillion'" /tmp/apk-badging.txt
+          "$tools_dir/aapt" dump permissions "$apk" > /tmp/apk-permissions.txt
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          apk = Path("artifacts/drc-golf-tourbillion/android/app/build/outputs/apk/release/app-release.apk")
+          with zipfile.ZipFile(apk) as archive:
+              files = set(archive.namelist())
+              assert "assets/index.android.bundle" in files, "Standalone JavaScript bundle is missing"
+              assert "classes.dex" in files, "Android bytecode is missing"
+              assert any(p.startswith("lib/arm64-v8a/") for p in files), "ARM64 native libraries are missing"
+          permissions = Path("/tmp/apk-permissions.txt").read_text()
+          for permission in ["RECORD_AUDIO", "SYSTEM_ALERT_WINDOW", "ACCESS_BACKGROUND_LOCATION",
+                             "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "READ_MEDIA_IMAGES",
+                             "READ_MEDIA_VIDEO", "READ_MEDIA_VISUAL_USER_SELECTED"]:
+              assert "android.permission." + permission + "'" not in permissions, permission
+          print("Standalone APK structure and final permissions verified.")
+          PY
+          mkdir -p android-installer
+          cp "$apk" android-installer/DRC-Golf-Tourbillion.apk
+          cd android-installer
+          sha256sum DRC-Golf-Tourbillion.apk > SHA256SUMS.txt
+
+      - name: Downloadable Android installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: DRC-Golf-Tourbillion-Android
+          path: android-installer/
+          if-no-files-found: error
+          retention-days: 14

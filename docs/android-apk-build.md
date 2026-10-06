@@ -7,6 +7,23 @@ toolchain on GitHub's runner, generates the ignored native Android project
 with Expo prebuild, builds a release-variant APK, and verifies its signature,
 package identifier, embedded JavaScript, ARM64 libraries and privacy permissions.
 
+## Activating the workflow with the connected GitHub account
+
+The connected GitHub authorization can write app source, but its declared scopes
+do not include `workflow`. Reconnecting with the same scopes does not fix that.
+The prepared workflow is also provided in the repository as `docs/android-apk.yml`.
+
+The repository owner can activate it in GitHub's web editor:
+
+1. Edit `docs/android-apk.yml`.
+2. At the start of the filename field, type `../` to leave the `docs` directory,
+   then change the filename to `.github/workflows/android-apk.yml`.
+3. Commit this move to `main`. The file contents need no edits.
+
+This activates the existing, manually triggered build configuration. It does not
+start the build automatically. Once the workflow is present, the connected account
+can request the build through GitHub Actions.
+
 ## Run and download
 
 1. Push the app source and workflow to the repository's `main` branch.

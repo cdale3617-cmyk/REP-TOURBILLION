@@ -101,6 +101,7 @@ test('manual health deletion targets one entry and preserves all other golf and 
     react: React,
     '@react-native-async-storage/async-storage': {},
     '@/utils/courseGeometry': {},
+    '@/utils/capricornChampionship': {},
     '@/utils/backup': backup,
     './useDeviceReadings': { useDeviceReadings: () => deviceReadings },
   });

@@ -1,6 +1,7 @@
 import type { GolfCourse } from '../context/GolfContext';
 import { canonicalCourseId } from './courseGeometry';
 import { parseCourseMap, type OsmElement } from './courseMapData';
+import { CAPRICORN_CHAMPIONSHIP_ID, CAPRICORN_BOUNDARY_ID, capricornChampionshipCourse, scopeChampionshipMap } from './capricornChampionship';
 
 // Free global OSM service; no account, API key or paid map subscription.
 // Provider policy: https://wiki.openstreetmap.org/wiki/Overpass_API
@@ -9,7 +10,7 @@ export async function queryOverpass(query: string, signal: AbortSignal, native =
   const response = await fetcher(OVERPASS_URL, {
     method: 'POST', signal,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded',
-      ...(native ? { 'User-Agent': 'DRC-Golf-Tempo/1.0.6 (+https://github.com/cdale3617-cmyk/REP-TOURBILLION; personal on-demand golf course maps)' } : {}) },
+      ...(native ? { 'User-Agent': 'DRC-Golf-Tempo/1.0.7 (+https://github.com/cdale3617-cmyk/REP-TOURBILLION; personal on-demand golf course maps)' } : {}) },
     body: `data=${encodeURIComponent(query)}`,
   }).catch(e => {
     if (signal.aborted) throw e;
@@ -39,7 +40,7 @@ export async function searchCourseDirectory(name: string, signal: AbortSignal, n
 export function parseCourseDirectory(raw: unknown): GolfCourse[] {
   const data = raw as { remark?: string; elements?: OsmElement[] } | null;
   if (!data || data.remark || !Array.isArray(data.elements)) throw new Error('The course directory returned an incomplete result. Try later.');
-  return data.elements.flatMap(e => {
+  const courses: GolfCourse[] = data.elements.flatMap(e => {
     if (!e || typeof e !== 'object') return [];
     const tags = Object.fromEntries(Object.entries(e.tags ?? {}).filter(([, value]) => typeof value === 'string'));
     const latitude = e.center?.lat ?? e.lat, longitude = e.center?.lon ?? e.lon;
@@ -55,6 +56,7 @@ export function parseCourseDirectory(raw: unknown): GolfCourse[] {
       phone: tags.phone ?? tags['contact:phone'], website: tags.website ?? tags['contact:website'], source: 'OpenStreetMap',
     }];
   });
+  return courses.flatMap(course => course.id === CAPRICORN_BOUNDARY_ID ? [capricornChampionshipCourse, course] : [course]);
 }
 export function courseLayoutQuery(osmKey: string) {
   const match = /^(way|relation)-([1-9]\d{0,14})$/.exec(osmKey);
@@ -67,7 +69,8 @@ export function courseLayoutQuery(osmKey: string) {
 }
 export async function downloadCourseMap(course: GolfCourse, signal: AbortSignal, native = false, fetcher = fetch) {
   const id = canonicalCourseId(course.id);
-  let key = id === 'pacific-golf-club' ? 'relation-1668736' : /^osm-(way|relation)-[1-9]\d{0,14}$/.test(id) ? id.slice(4) : '';
+  let key = id === CAPRICORN_CHAMPIONSHIP_ID ? 'way-332993065'
+    : id === 'pacific-golf-club' ? 'relation-1668736' : /^osm-(way|relation)-[1-9]\d{0,14}$/.test(id) ? id.slice(4) : '';
   if (!key) {
     const result = await searchCourseDirectory(course.name, signal, native, fetcher);
     const normal = (s: string) => s.trim().toLocaleLowerCase();
@@ -77,5 +80,10 @@ export async function downloadCourseMap(course: GolfCourse, signal: AbortSignal,
     if (matches.length !== 1) throw new Error('This course has no unambiguous mapped boundary. Choose its boundary entry in worldwide search; some courses are mapped only as a point.');
     key = matches[0].id.slice(4);
   }
-  return parseCourseMap(await queryOverpass(courseLayoutQuery(key), signal, native, fetcher), id, key);
+  const raw = await queryOverpass(courseLayoutQuery(key), signal, native, fetcher);
+  const map = parseCourseMap(id === CAPRICORN_CHAMPIONSHIP_ID ? scopeChampionshipMap(raw) : raw, id, key);
+  if (id === CAPRICORN_CHAMPIONSHIP_ID && map.geometry.holes.length !== 18) {
+    throw new Error('The refreshed Championship map is incomplete or has changed. Included offline paths remain available; no targets were replaced.');
+  }
+  return map;
 }

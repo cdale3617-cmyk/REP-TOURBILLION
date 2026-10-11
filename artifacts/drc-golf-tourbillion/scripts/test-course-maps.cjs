@@ -40,6 +40,7 @@ const data = load('../utils/courseMapData.ts');
 const api = load('../utils/courseMapApi.ts');
 const geometry = load('../utils/courseGeometry.ts');
 const cache = load('../hooks/useCourseMap.ts');
+const championship = load('../utils/capricornChampionship.ts');
 const box = (x, y, d) => [{ lat: y, lon: x }, { lat: y, lon: x + d }, { lat: y + d, lon: x + d }, { lat: y + d, lon: x }, { lat: y, lon: x }];
 // Synthetic parser fixtures only. These are never bundled as real course maps.
 const raw = {
@@ -57,6 +58,52 @@ const raw = {
   ],
 };
 const mapped = () => data.parseCourseMap(structuredClone(raw), 'osm-way-10', 'way-10', new Date('2026-10-11T01:00:00Z'));
+test('Championship has 18 real offline paths, correct pars and no invented green targets', () => {
+  const g = geometry.getCourseGeometry(championship.CAPRICORN_CHAMPIONSHIP_ID);
+  assert.equal(g.holes.length, 18);
+  assert.equal(g.holes[0].par, 5);
+  assert.deepEqual(g.holes.map(h => h.par), [5,4,3,4,4,4,3,4,5,4,3,4,4,3,5,4,4,5]);
+  assert.equal(g.holes.reduce((sum, h) => sum + h.par, 0), 72);
+  assert.equal(new Set(g.holes.map(h => h.osmWayId)).size, 18);
+  assert.ok(g.holes.every(h => h.targetKind === 'path-end'));
+  assert.equal(geometry.getCourseGeometry(championship.CAPRICORN_BOUNDARY_ID), null);
+});
+test('explicit Championship choice preserves scores, readings, history and pins', () => {
+  const oldCourse = { ...championship.capricornChampionshipCourse,
+    id: championship.CAPRICORN_BOUNDARY_ID, name: 'Mercure Capricorn Resort Golf' };
+  const state = {
+    courses: [oldCourse], lastCourseId: oldCourse.id,
+    activeRound: { id: 'current', courseId: oldCourse.id, currentHole: 1, startedAt: 'unchanged',
+      holes: [{ hole: 1, par: 4, score: 6, putts: 2, penalties: 1 }] },
+    rounds: [{ courseId: oldCourse.id, holes: [{ hole: 1, par: 4, score: 7 }] }],
+    dailyPins: [{ courseId: oldCourse.id, hole: 1 }],
+    activities: [{ id: 'swing' }], biometrics: [{ id: 'health' }],
+  };
+  const next = championship.selectCapricornChampionship(state);
+  assert.equal(next.activeRound.holes[0].par, 5);
+  assert.equal(next.activeRound.courseId, championship.CAPRICORN_CHAMPIONSHIP_ID);
+  assert.deepEqual(next.activeRound.holes[0], { hole: 1, par: 5, score: 6, putts: 2, penalties: 1 });
+  for (const k of ['rounds', 'dailyPins', 'activities', 'biometrics']) assert.equal(next[k], state[k]);
+  assert.deepEqual(state.activeRound.holes[0], { hole: 1, par: 4, score: 6, putts: 2, penalties: 1 });
+  assert.ok(next.courses.some(c => c.id === oldCourse.id));
+  assert.equal(championship.selectCapricornChampionship({ ...state, activeRound: null }).lastCourseId,
+    championship.CAPRICORN_CHAMPIONSHIP_ID);
+  const other = { ...state, activeRound: { ...state.activeRound, courseId: 'other' } };
+  assert.equal(championship.selectCapricornChampionship(other), other);
+});
+test('Championship refresh separates duplicate hole numbers and checks playing direction', () => {
+  const g = geometry.getCourseGeometry(championship.CAPRICORN_CHAMPIONSHIP_ID);
+  const elements = g.holes.map(h => ({ type: 'way', id: Number(h.osmWayId),
+    tags: { golf: 'hole', ref: String(h.hole) },
+    geometry: [...h.path].reverse().map(p => ({ lat: p.latitude, lon: p.longitude })) }));
+  elements.push({ ...elements[0], id: 999999 });
+  const scoped = championship.scopeChampionshipMap({ elements });
+  assert.equal(scoped.elements.length, 18);
+  assert.deepEqual(scoped.elements[0].geometry[0], { lat: g.holes[0].path[0].latitude, lon: g.holes[0].path[0].longitude });
+  assert.equal(scoped.elements[0].tags.par, '5');
+  elements[0].geometry[0] = { lat: 0, lon: 0 };
+  assert.equal(championship.scopeChampionshipMap({ elements }).elements.length, 17);
+});
 test('real tags produce numbered paths, source identity, polygon surfaces and water islands', () => {
   const map = mapped();
   assert.deepEqual(map.geometry.holes.map(h => h.hole), [1, 2]);

@@ -145,6 +145,7 @@ test('context edits only the selected active/saved hole, blocks inconsistent tot
   };
   const context = load('context/GolfContext.tsx', {
     react: React, '@react-native-async-storage/async-storage': {}, '@/utils/courseGeometry': {},
+    '@/utils/capricornChampionship': {},
     '@/utils/backup': backup, './useDeviceReadings': { useDeviceReadings: () => ({}) },
   });
   slots = [{ ...base(), activeRound: round('active'), rounds: [round('saved'), round('untouched')] }, true, '', true];

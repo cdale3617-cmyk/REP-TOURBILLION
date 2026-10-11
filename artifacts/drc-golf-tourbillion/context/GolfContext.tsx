@@ -5,6 +5,7 @@ import { validateGolfState, validateHolePerformance } from '@/utils/backup';
 import type { ShotConditions } from '@/utils/shotConditions';
 import type { PhoneMotionSummary } from '@/utils/phoneMotion';
 import { useDeviceReadings } from './useDeviceReadings';
+import { selectCapricornChampionship as chooseChampionship } from '@/utils/capricornChampionship';
 import { getTrainingWeekKey, trainingPlanSchema, trainingSessionSchema, type TrainingPlan, type TrainingSession, type TrainingState } from '@/utils/training';
 
 export type Club = {
@@ -115,6 +116,7 @@ type GolfContextValue = GolfState & {
   addClub: () => void;
   removeClub: (id: string) => void;
   startRound: (courseId?: string) => void;
+  selectCapricornChampionship: () => void;
   setCurrentHole: (hole: number) => void;
   setHoleScore: (hole: number, score: number) => void;
   setHolePerformance: (roundId: string, hole: number, performance: HolePerformance) => void;
@@ -302,6 +304,7 @@ export function GolfProvider({ children }: { children: ReactNode }) {
       bag: [...current.bag, { id: `${Date.now()}`, name: 'New club', make: '', model: '', carryMeters: 100, loft: 45 }],
     })),
     removeClub: (id) => setState((current) => ({ ...current, bag: current.bag.filter((club) => club.id !== id) })),
+    selectCapricornChampionship: () => setState(chooseChampionship),
     startRound: (courseId) => setState((current) => {
       if (current.activeRound) return current;
       const selected = courseId ?? current.lastCourseId;

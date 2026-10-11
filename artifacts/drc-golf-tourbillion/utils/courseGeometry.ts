@@ -1,5 +1,6 @@
 import pacificHoles from '../data/pacific-holes.json';
 import pacificSurfaces from '../data/pacific-surfaces.json';
+import capricornData from '../data/capricorn-championship.json';
 
 export type Coordinate = { latitude: number; longitude: number };
 export type MapFeature = {
@@ -43,6 +44,20 @@ const pacific: CourseGeometry = {
   longitude: 153.1064,
 };
 
+const championshipHoles: VerifiedHole[] = capricornData.holes.map(item => {
+  const path = item.path.map(([latitude, longitude]) => ({ latitude, longitude }));
+  return { hole: item.hole, par: item.par, osmWayId: item.osmWayId, path,
+    target: path[path.length - 1], targetKind: 'path-end' };
+});
+const championshipPoints = championshipHoles.flatMap(hole => hole.path);
+export const capricornChampionshipGeometry: CourseGeometry = {
+  holes: championshipHoles, features: [],
+  latitude: (Math.min(...championshipPoints.map(p => p.latitude)) + Math.max(...championshipPoints.map(p => p.latitude))) / 2,
+  longitude: (Math.min(...championshipPoints.map(p => p.longitude)) + Math.max(...championshipPoints.map(p => p.longitude))) / 2,
+  checkedAt: capricornData.retrievedAt,
+  source: 'OpenStreetMap · reviewed Championship paths',
+  sourceUrl: 'https://www.openstreetmap.org/way/332993065',
+};
 const downloaded = new Map<string, CourseGeometry>();
 export function registerCourseGeometry(courseId: string, geometry: CourseGeometry) {
   downloaded.set(canonicalCourseId(courseId), geometry);
@@ -51,7 +66,8 @@ export function registerCourseGeometry(courseId: string, geometry: CourseGeometr
 export function getCourseGeometry(courseId?: string): CourseGeometry | null {
   if (!courseId) return null;
   return downloaded.get(canonicalCourseId(courseId))
-    ?? (courseId === 'pacific-golf-club' || courseId === 'osm-relation-1668736' ? pacific : null);
+    ?? (courseId === capricornData.courseId ? capricornChampionshipGeometry
+      : courseId === 'pacific-golf-club' || courseId === 'osm-relation-1668736' ? pacific : null);
 }
 
 export function canonicalCourseId(courseId: string): string {

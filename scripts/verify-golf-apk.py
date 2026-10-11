@@ -78,6 +78,8 @@ if args.previous:
         required = [
             "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
             "worldwide-course-query",
+            "capricorn-championship",
+            "select-capricorn-championship",
         ]
         source = json.loads(Path("artifacts/drc-golf-tourbillion/data/pacific-surfaces.json").read_text())
         required.extend(feature["id"] for feature in source["features"][:5])

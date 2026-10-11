@@ -16,6 +16,7 @@ import { RoundScoreControls } from '@/components/RoundScoreControls';
 import { ExpandablePanel } from '@/components/ExpandablePanel';
 import { getTargetDistance, isDailyPinCurrent } from '@/utils/courseGeometry';
 import { useCourseMap } from '@/hooks/useCourseMap';
+import { CAPRICORN_CHAMPIONSHIP_ID, isCapricornBoundary } from '@/utils/capricornChampionship';
 import { getHoleMapLayout } from '@/utils/holeMapLayout';
 import { WindReading } from '@/utils/wind';
 import { HolePerformanceEditor } from '@/components/HolePerformanceEditor';
@@ -34,7 +35,7 @@ export default function RoundScreen() {
   const [windState, setWindState] = useState<{ courseId: string; reading: WindReading } | null>(null);
   const [statsDirty, setStatsDirty] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const { courses, activeRound, lastCourseId, startRound, setCurrentHole, setHoleScore, finishRound, unit, rounds, dailyPins, removeDailyPin, bag, isReady, storageError } = useGolf();
+  const { courses, activeRound, lastCourseId, startRound, selectCapricornChampionship, setCurrentHole, setHoleScore, finishRound, unit, rounds, dailyPins, removeDailyPin, bag, isReady, storageError } = useGolf();
   const { gps, error: gpsError, now, enabled, setEnabled, retry, locating } = useLiveGps();
   const gpsButtonLabel = gpsError ? 'GPS error' : locating ? 'Finding GPS' : gps ? 'GPS live' : 'Live GPS';
   const course = courses.find((item) => item.id === (activeRound?.courseId ?? lastCourseId));
@@ -62,7 +63,13 @@ export default function RoundScreen() {
   const pinDistance = getTargetDistance(gps, dailyPin, now);
   const displayPinDistance = pinDistance.meters === null ? null : Math.round(unit === 'yd' ? pinDistance.meters * 1.09361 : pinDistance.meters);
   const mapActions = <View style={{ gap: 6, marginVertical: 6 }}>
-    <ActionButton secondary icon="download" title={courseMap.busy ? 'Loading free course map…' : courseMap.map || geometry?.features?.length ? 'Refresh free course map' : 'Load free course map'}
+    {isCapricornBoundary(course) ? <>
+      <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>This club boundary contains two layouts. Select Championship to show its 18 included offline paths and actual pars, including hole 1 · par 5. Your current scores stay unchanged; saved rounds and pins are not reassigned.</Text>
+      <ActionButton title="Use Championship layout" icon="flag" testID="select-capricorn-championship"
+        disabled={statsDirty || !isReady || !!storageError} onPress={selectCapricornChampionship} />
+    </> : null}
+    {course?.id === CAPRICORN_CHAMPIONSHIP_ID ? <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>Championship · 18 playing paths included offline. Pars cross-checked with published scorecards. Included paths are not full fairway/green outlines or satellite images; distances refer to mapped hole ends, not verified green centres.</Text> : null}
+    <ActionButton secondary icon="download" title={courseMap.busy ? 'Loading free course map…' : courseMap.map || geometry?.holes.length || geometry?.features?.length ? 'Refresh free course map' : 'Load free course map'}
       testID="load-course-map" disabled={!course || courseMap.busy} onPress={() => void courseMap.load()} />
     {courseMap.busy ? <ActivityIndicator color={colors.primary} /> : null}
     {courseMap.error ? <Text accessibilityRole="alert" style={[styles.bodySmall, { color: colors.destructive }]}>{courseMap.error}</Text> : null}

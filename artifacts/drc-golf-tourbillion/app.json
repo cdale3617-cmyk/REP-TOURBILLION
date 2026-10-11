@@ -2,7 +2,7 @@
   "expo": {
     "name": "DRC Golf Tempo",
     "slug": "drc-golf-tourbillion",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "drc-golf-tourbillion",
@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.drc.golftourbillion",
-      "versionCode": 8,
+      "versionCode": 9,
       "allowBackup": false,
       "permissions": [
         "android.permission.health.READ_HEART_RATE",

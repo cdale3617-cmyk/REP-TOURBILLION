@@ -13,7 +13,7 @@ const loaded = new Module(filename, module);
 loaded.filename = filename;
 loaded.paths = module.paths;
 loaded._compile(compiled, filename);
-const { getHoleMapLayout } = loaded.exports;
+const { getHoleMapLayout, getHoleFocusClip } = loaded.exports;
 const windFilename = path.resolve(__dirname, '../utils/wind.ts');
 const compiledWind = ts.transpileModule(fs.readFileSync(windFilename, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true },
@@ -33,6 +33,27 @@ function assertMapCanvasMatchesPanel(layout) {
   const panelRatio = layout.mapPanelWidth / layout.frameHeight;
   assert.ok(Math.abs(canvasRatio - panelRatio) < 0.01, `${canvasRatio} should match ${panelRatio}`);
 }
+
+test('selected-hole display crop follows its path rather than whole-course bounds', () => {
+  const path = [{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 200, y: 100 }];
+  const original = structuredClone(path);
+  const crop = getHoleFocusClip(path, 1);
+  assert.equal(crop.radius, 45);
+  assert.deepEqual(crop.segments[0], [{ x: 0, y: 45 }, { x: 200, y: 45 }, { x: 200, y: -45 }, { x: 0, y: -45 }]);
+  assert.deepEqual(crop.segments[1], [{ x: 155, y: 0 }, { x: 155, y: 100 }, { x: 245, y: 100 }, { x: 245, y: 0 }]);
+  assert.deepEqual(path, original, 'display cropping must never change sourced coordinates');
+  assert.equal(getHoleFocusClip(path, 2).radius, 90, 'real-world crop width must not depend on screen size');
+  const next = getHoleFocusClip([{ x: 500, y: 500 }, { x: 500, y: 700 }], 1);
+  assert.equal(next.segments[0][0].x, 455, 'a different hole produces a different crop');
+  assert.ok(crop.segments.flat().every(p => p.x < 500 && p.y < 500), 'distant course outlines are outside this crop');
+});
+
+test('hole focus tolerates duplicate path vertices but rejects invalid projections', () => {
+  assert.equal(getHoleFocusClip([{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 10, y: 10 }], 1).segments.length, 1);
+  assert.throws(() => getHoleFocusClip([], 1), /valid projected/);
+  assert.throws(() => getHoleFocusClip([{ x: 0, y: 0 }, { x: NaN, y: 1 }], 1), /valid projected/);
+  assert.throws(() => getHoleFocusClip([{ x: 0, y: 0 }, { x: 1, y: 1 }], 0), /valid projected/);
+});
 
 test('phone maps leave room for hole controls and keep their canvas matched to the panel', () => {
   for (const [width, height] of [[200, 800], [360, 780], [392, 852], [440, 800]]) {

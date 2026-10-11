@@ -10,7 +10,7 @@ export async function queryOverpass(query: string, signal: AbortSignal, native =
   const response = await fetcher(OVERPASS_URL, {
     method: 'POST', signal,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded',
-      ...(native ? { 'User-Agent': 'DRC-Golf-Tempo/1.0.7 (+https://github.com/cdale3617-cmyk/REP-TOURBILLION; personal on-demand golf course maps)' } : {}) },
+      ...(native ? { 'User-Agent': 'DRC-Golf-Tempo/1.0.8 (+https://github.com/cdale3617-cmyk/REP-TOURBILLION; personal on-demand golf course maps)' } : {}) },
     body: `data=${encodeURIComponent(query)}`,
   }).catch(e => {
     if (signal.aborted) throw e;

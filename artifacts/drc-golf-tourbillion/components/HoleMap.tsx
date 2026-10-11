@@ -5,7 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import Svg, { Circle, ClipPath, Defs, G, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { useColors } from '@/hooks/useColors';
 import { Coordinate, distanceMeters, MapFeature, VerifiedHole } from '@/utils/courseGeometry';
-import { getHoleMapLayout } from '@/utils/holeMapLayout';
+import { getHoleFocusClip, getHoleMapLayout } from '@/utils/holeMapLayout';
 import { compassDirectionLabel, windAnimationDuration, windFlowDirectionDegrees, WindReading } from '@/utils/wind';
 
 type WindArrowAnchor = { left: `${number}%`; top: `${number}%` };
@@ -134,6 +134,7 @@ export function HoleMap({ geometry, position, dailyPin, wind, availableHeight, f
     return { x: offX + (p.x - minX) * scale, y: offY + (p.y - minY) * scale };
   };
   const path = geometry.path.map(project);
+  const focus = getHoleFocusClip(path, scale);
   const target = project(geometry.target);
   const player = position && playerNear ? project(position) : null;
   const pin = dailyPin && pinNear ? project(dailyPin) : null;
@@ -149,6 +150,7 @@ export function HoleMap({ geometry, position, dailyPin, wind, availableHeight, f
   }).filter((v) => v.hit && v.rings.length);
   const hasSurfaces = visible.length > 0;
   const clipId = `holeclip-${geometry.hole}`;
+  const focusClipId = `holefocus-${geometry.osmWayId}-${geometry.hole}`;
   const col = colors as unknown as Record<string, string>;
 
   // Labels sit beyond the marker, away from the path, and are dropped when they would collide.
@@ -166,18 +168,26 @@ export function HoleMap({ geometry, position, dailyPin, wind, availableHeight, f
     ? `GPS fix is ${distanceNote(position)} from the mapped target, outside the view.`
     : dailyPin && !pinNear
       ? `Saved pin is ${distanceNote(dailyPin)} from the mapped target, outside the view.`
-      : hasSurfaces ? 'Mapped surfaces from OpenStreetMap; may be incomplete.' : 'Playing path only. No fairway or green outlines mapped.';
+      : hasSurfaces ? `Hole ${geometry.hole} view. Real outlines cropped near this path; may be incomplete.` : 'Playing path only. No fairway or green outlines mapped.';
   const dFor = (rings: { x: number; y: number }[][]) => rings.map((r) => `${r.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')}Z`).join(' ');
   return (
-    <View accessibilityLabel={`Hole ${geometry.hole}, ${hasSurfaces ? 'mapped surfaces and' : 'path-only,'} tee-to-green playing path, north up. ${note}${wind ? ` Wind from ${compassDirectionLabel(wind.windDirection)} at ${Math.round(wind.windKph)} kilometres per hour` : ''}`} style={{ width: '100%', height: frameHeight, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.mapBase }}>
+    <View testID={`hole-map-${geometry.hole}`} accessibilityLabel={`Hole ${geometry.hole}, selected-hole view, ${hasSurfaces ? 'mapped surfaces and' : 'path-only,'} tee-to-${geometry.targetKind === 'path-end' ? 'hole-end' : 'green-reference'} playing path, north up. ${note}${wind ? ` Wind from ${compassDirectionLabel(wind.windDirection)} at ${Math.round(wind.windKph)} kilometres per hour` : ''}`} style={{ width: '100%', height: frameHeight, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.mapBase }}>
       <Svg width="100%" height="100%" viewBox={`0 0 ${viewWidth} ${viewHeight}`}>
-        <Defs><ClipPath id={clipId}><Rect x={0} y={0} width={viewWidth} height={viewHeight} /></ClipPath></Defs>
+        <Defs>
+          <ClipPath id={clipId}><Rect x={0} y={0} width={viewWidth} height={viewHeight} /></ClipPath>
+          <ClipPath id={focusClipId}>
+            {focus.segments.map((segment, i) => <Path key={`segment-${i}`} d={dFor([segment])} />)}
+            {focus.centres.map((point, i) => <Circle key={`centre-${i}`} cx={point.x} cy={point.y} r={focus.radius} />)}
+          </ClipPath>
+        </Defs>
         <G clipPath={`url(#${clipId})`}>
+          <G clipPath={`url(#${focusClipId})`}>
           {DRAW_ORDER.flatMap((kind) => visible.filter((v) => v.f.kind === kind).map((v) => {
             const st = FEATURE_STYLE[kind];
             return <Path key={`${kind}-${v.f.id}`} d={dFor(v.rings)} fillRule="evenodd" fill={col[st.fill]} fillOpacity={st.opacity} stroke={st.stroke ? col[st.stroke] : 'none'} strokeWidth={st.stroke ? 1 : 0} />;
           }))}
-          <Path d={path.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${p.y}`).join(' ')} stroke={colors.mapGreen} strokeWidth={hasSurfaces ? 1.5 : 3} strokeDasharray={hasSurfaces ? '4 3' : undefined} fill="none" />
+          </G>
+          <Path d={path.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${p.y}`).join(' ')} stroke={colors.primary} strokeWidth={3} fill="none" />
         </G>
         <Circle cx={tee.x} cy={tee.y} r={shortMap ? 3 : 5} fill={colors.mutedForeground} />
         {showTeeLabel ? <SvgText x={teeLabel.x} y={teeLabel.y} fontSize={labelSize} textAnchor="middle" fill={colors.foreground}>Tee</SvgText> : null}
@@ -185,6 +195,7 @@ export function HoleMap({ geometry, position, dailyPin, wind, availableHeight, f
         {showTgtLabel ? <SvgText x={tgtLabel.x} y={tgtLabel.y} fontSize={labelSize} textAnchor="middle" fill={colors.foreground}>{geometry.targetKind === 'path-end' ? 'Hole end' : 'Green ref'}</SvgText> : null}
         {pin ? <Circle cx={pin.x} cy={pin.y} r={shortMap ? 5 : 9} fill="none" stroke={colors.foreground} strokeWidth={2} /> : null}
         {player ? <Circle cx={player.x} cy={player.y} r={shortMap ? 3 : 6} fill={colors.foreground} stroke={colors.background} strokeWidth={2} /> : null}
+        <SvgText x={viewWidth / 2} y={labelSize + 6} fontSize={labelSize} textAnchor="middle" fill={colors.foreground}>HOLE {geometry.hole}</SvgText>
         <SvgText x={viewWidth - 12} y={labelSize + 6} fontSize={labelSize} textAnchor="end" fill={colors.foreground}>N ↑</SvgText>
       </Svg>
       {!shortMap ? (

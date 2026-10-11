@@ -30,3 +30,15 @@ The application uses this offline snapshot, not the OSM editing API at runtime.
 Review numbering and green containment again before replacing the snapshot.
 Only the exact seed ID and OSM relation ID are linked; matching by course name
 or proximity alone could attach another course's targets.
+
+## Championship green outlines
+
+`capricorn-surfaces.json` contains unchanged green rings from the small OSM
+extract retrieved 2026-10-11:
+https://api.openstreetmap.org/api/0.6/map?bbox=150.740,-23.073,150.758,-23.055
+© OpenStreetMap contributors, ODbL 1.0. Each of the 18 reviewed playing-path
+endpoints is an exact vertex of exactly one sourced green. The curation script
+checks that join, closure and complete membership. These targets are green-edge
+references, not centres or daily flags. Fairway, bunker, water and tree polygons
+were absent from this extract; no synthetic outlines or safe routes fill those
+gaps. The draw-only corridor does not establish ownership of other nearby shapes.

@@ -76,5 +76,5 @@ export function useCourseMap(course?: GolfCourse) {
     } finally { clearTimeout(timer); }
   }
   const current = state.id === id ? state : { id, map: null, busy: false, error: '', cached: false };
-  return { ...current, geometry: current.map?.geometry ?? (id ? getCourseGeometry(id) : null), load };
+  return { ...current, geometry: id ? getCourseGeometry(id) : null, load };
 }

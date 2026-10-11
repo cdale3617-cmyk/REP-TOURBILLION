@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -18,7 +18,7 @@ import { getTargetDistance, isDailyPinCurrent } from '@/utils/courseGeometry';
 import { useCourseMap } from '@/hooks/useCourseMap';
 import { CAPRICORN_CHAMPIONSHIP_ID, isCapricornBoundary } from '@/utils/capricornChampionship';
 import { getHoleMapLayout } from '@/utils/holeMapLayout';
-import { WindReading } from '@/utils/wind';
+import { useCourseWeather } from '@/hooks/useCourseWeather';
 import { HolePerformanceEditor } from '@/components/HolePerformanceEditor';
 import { AntiGlareButton } from '@/components/AntiGlareButton';
 import { AppText as Text } from '@/components/AppText';
@@ -32,21 +32,12 @@ export default function RoundScreen() {
   const landscape = windowWidth >= 520 && windowHeight < 600 && windowWidth / windowHeight >= 1.18;
   const mapHeight = getRoundMapHeight(windowHeight, fontScale, insets.top, insets.bottom, Platform.OS === 'web', landscape);
   const holeMapLayout = getHoleMapLayout(windowWidth, windowHeight);
-  const [windState, setWindState] = useState<{ courseId: string; reading: WindReading } | null>(null);
   const [statsDirty, setStatsDirty] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const { courses, activeRound, lastCourseId, startRound, selectCapricornChampionship, setCurrentHole, setHoleScore, finishRound, unit, rounds, dailyPins, removeDailyPin, bag, isReady, storageError } = useGolf();
   const { gps, error: gpsError, now, enabled, setEnabled, retry, locating } = useLiveGps();
   const gpsButtonLabel = gpsError ? 'GPS error' : locating ? 'Finding GPS' : gps ? 'GPS live' : 'Live GPS';
   const course = courses.find((item) => item.id === (activeRound?.courseId ?? lastCourseId));
-  const handleWindChange = useCallback((reading: WindReading | null) => {
-    if (!course || !reading) {
-      setWindState(null);
-      return;
-    }
-    setWindState({ courseId: course.id, reading });
-  }, [course?.id]);
-  const currentWind = windState !== null && windState.courseId === course?.id ? windState.reading : null;
   const hole = activeRound?.holes.find((item) => item.hole === activeRound.currentHole);
   const score = hole?.score ?? 0;
   const minimumScore = Math.max(1, (hole?.putts ?? 0) + (hole?.penalties ?? 0));
@@ -54,6 +45,8 @@ export default function RoundScreen() {
   const total = useMemo(() => activeRound?.holes.reduce((sum, item) => sum + (item.score ?? 0), 0) ?? 0, [activeRound]);
    const courseMap = useCourseMap(course);
    const geometry = courseMap.geometry;
+   const weather = useCourseWeather(geometry?.latitude ?? course?.latitude, geometry?.longitude ?? course?.longitude);
+   const currentWind = weather.isError ? null : weather.data ?? null;
   const holeGeometry = geometry?.holes.find((item) => item.hole === (activeRound?.currentHole ?? 1));
    const targetLabel = holeGeometry?.targetKind === 'path-end' ? 'Mapped hole end' : 'Green reference';
   const { meters: gpsDistance, reason: distanceStatus } = getTargetDistance(gps, holeGeometry?.target, now);
@@ -68,7 +61,7 @@ export default function RoundScreen() {
       <ActionButton title="Use Championship layout" icon="flag" testID="select-capricorn-championship"
         disabled={statsDirty || !isReady || !!storageError} onPress={selectCapricornChampionship} />
     </> : null}
-    {course?.id === CAPRICORN_CHAMPIONSHIP_ID ? <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>Championship · 18 playing paths included offline. Pars cross-checked with published scorecards. Included paths are not full fairway/green outlines or satellite images; distances refer to mapped hole ends, not verified green centres.</Text> : null}
+    {course?.id === CAPRICORN_CHAMPIONSHIP_ID ? <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>Championship · 18 playing paths and 18 sourced green outlines included offline. Pars cross-checked with published scorecards. Targets are mapped green-edge references, not centres or daily pins. Fairways, bunkers, water and trees are not mapped in the checked extract.</Text> : null}
     <ActionButton secondary icon="download" title={courseMap.busy ? 'Loading free course map…' : courseMap.map || geometry?.holes.length || geometry?.features?.length ? 'Refresh free course map' : 'Load free course map'}
       testID="load-course-map" disabled={!course || courseMap.busy} onPress={() => void courseMap.load()} />
     {courseMap.busy ? <ActivityIndicator color={colors.primary} /> : null}
@@ -87,8 +80,8 @@ export default function RoundScreen() {
       <PageHeading title={activeRound ? `Hole ${activeRound.currentHole} · Par ${hole?.par ?? '—'}` : 'ROUND'} subtitle={landscape ? undefined : course?.name ?? 'Choose a course to get started'} eyebrow={course?.name && !landscape ? undefined : undefined} right={<Pill tone="muted">{played}/18 SCORED</Pill>} />
       {!activeRound ? (
           <Card style={styles.emptyCard}>
-            <View style={styles.pair}><Label tone="primary">Hole 1{holeGeometry?.par ? ` · Par ${holeGeometry.par}` : ''}</Label><View style={{ flex: 1 }} /><Label>North up</Label></View>
-            <HoleMap geometry={holeGeometry} features={geometry?.features} availableHeight={mapHeight} />
+            <View style={styles.pair}><Label tone="primary">Hole 1{holeGeometry?.par ? ` · Par ${holeGeometry.par}` : ''}</Label><View style={{ flex: 1 }} /><Label>Tee to target</Label></View>
+            <HoleMap geometry={holeGeometry} features={geometry?.features} availableHeight={mapHeight} wind={currentWind} position={gpsDistance !== null ? gps : null} />
             {mapActions}
           <View style={styles.emptyCopy}>
              <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>Start to keep score and use live GPS. The map shows the sourced playing path, not a satellite image.</Text>
@@ -117,7 +110,7 @@ export default function RoundScreen() {
           <Card style={styles.roundCard}>
              {!landscape ? <View style={styles.courseRow}>
               <View style={{ flex: 1 }}>
-                 <Label>{targetLabel} · north up</Label>
+                  <Label>{targetLabel} · tee to target</Label>
               </View>
              </View> : null}
             {holeMapLayout.sideBySide ? (
@@ -211,7 +204,7 @@ export default function RoundScreen() {
                <CaddieAssistant clubs={bag} unit={unit} currentHole={activeRound.currentHole} par={hole?.par} liveDistanceMeters={holeGeometry?.targetKind === 'path-end' ? null : gpsDistance} wind={currentWind} />
              </Card>
            </ExpandablePanel>
-           {course ? <ExpandablePanel title="Course weather" icon="cloud" testID="round-weather-toggle"><WeatherCard latitude={geometry?.latitude ?? course.latitude} longitude={geometry?.longitude ?? course.longitude} onWindChange={handleWindChange} /></ExpandablePanel> : null}
+           {course ? <ExpandablePanel title="Course weather" icon="cloud" testID="round-weather-toggle"><WeatherCard latitude={geometry?.latitude ?? course.latitude} longitude={geometry?.longitude ?? course.longitude} /></ExpandablePanel> : null}
 
            <ExpandablePanel title="Round tools & statistics" icon="bar-chart-2" testID="round-tools-toggle">
           {hole ? <HolePerformanceEditor key={`${activeRound.id}:${hole.hole}`} roundId={activeRound.id} hole={hole} onDirtyChange={setStatsDirty} /> : null}

@@ -32,7 +32,7 @@ export function getHoleMapLayout(windowWidth: number, windowHeight = 800, availa
   const maxFrameHeight = Math.max(1, Math.floor(Math.min(height * 0.9,
     availableHeight !== undefined && Number.isFinite(availableHeight) ? availableHeight : Infinity)));
   const minimumFrameHeight = Math.min(sideBySide ? 280 : 220, maxFrameHeight);
-  const preferredFrameHeight = sideBySide ? mapPanelWidth * 2.1 : Math.min(340, height * 0.4);
+  const preferredFrameHeight = sideBySide ? mapPanelWidth * 2.1 : Math.min(620, height * 0.62);
   const frameHeight = Math.max(
     1,
     Math.min(
@@ -42,8 +42,8 @@ export function getHoleMapLayout(windowWidth: number, windowHeight = 800, availa
     ),
   );
   const viewHeight = Math.max(1, Math.round(frameHeight * viewWidth / mapPanelWidth));
-  // Reserve space for tee/green labels even in a short landscape canvas.
-  const verticalInset = Math.min(38, Math.max(24, viewHeight * 0.12), viewHeight * 0.38);
+  // Text lives outside the drawing, so only a small inset is needed.
+  const verticalInset = Math.min(18, viewHeight * 0.1);
   const tall = frameHeight > mapPanelWidth;
   return {
     sideBySide,
@@ -59,4 +59,51 @@ export function getHoleMapLayout(windowWidth: number, windowHeight = 800, availa
       height: Math.max(1, viewHeight - verticalInset * 2),
     },
   };
+}
+type Geo = { latitude: number; longitude: number };
+
+/** Initial compass bearing from a to b, degrees clockwise from north. */
+export function bearingDegrees(a: Geo, b: Geo) {
+  const cosLat = Math.cos(a.latitude * Math.PI / 180);
+  const east = (b.longitude - a.longitude) * cosLat, north = b.latitude - a.latitude;
+  if (east === 0 && north === 0) return 0;
+  return (Math.atan2(east, north) * 180 / Math.PI + 360) % 360;
+}
+
+/** Screen angle (clockwise from up) of a compass direction on a map whose up is `heading`. */
+export function screenAngle(compassDegrees: number, heading: number) {
+  return (((compassDegrees - heading) % 360) + 360) % 360;
+}
+
+/**
+ * Tee-to-target projection: real coordinates are rotated so the target is up,
+ * with one equal metre scale on both axes. Nothing is invented or stretched.
+ */
+export function createHoleProjection(
+  path: Geo[], target: Geo, extra: Geo[],
+  plot: { left: number; top: number; width: number; height: number },
+) {
+  const origin = path[0];
+  const cosLat = Math.cos(origin.latitude * Math.PI / 180);
+  const heading = bearingDegrees(origin, target);
+  const t = heading * Math.PI / 180;
+  const local = (c: Geo) => {
+    const e = (c.longitude - origin.longitude) * cosLat * 111320;
+    const n = (c.latitude - origin.latitude) * 111320;
+    return { x: e * Math.cos(t) - n * Math.sin(t), y: -(e * Math.sin(t) + n * Math.cos(t)) };
+  };
+  const pts = [...path, target, ...extra].map(local);
+  let minX = Math.min(...pts.map(p => p.x)), maxX = Math.max(...pts.map(p => p.x));
+  let minY = Math.min(...pts.map(p => p.y)), maxY = Math.max(...pts.map(p => p.y));
+  const margin = Math.max(30, 0.12 * Math.max(maxX - minX, maxY - minY));
+  minX -= margin; maxX += margin; minY -= margin; maxY += margin;
+  const spanX = Math.max(1, maxX - minX), spanY = Math.max(1, maxY - minY);
+  const scale = Math.min(plot.width / spanX, plot.height / spanY);
+  const offX = plot.left + (plot.width - spanX * scale) / 2;
+  const offY = plot.top + (plot.height - spanY * scale) / 2;
+  const project = (c: Geo) => {
+    const p = local(c);
+    return { x: offX + (p.x - minX) * scale, y: offY + (p.y - minY) * scale };
+  };
+  return { project, heading, scale, northAngle: screenAngle(0, heading) };
 }

@@ -1,12 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { AppText as Text } from '@/components/AppText';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { Card } from '@/components/Primitives';
 import { compassDirectionLabel, WindReading } from '@/utils/wind';
+import { useCourseWeather } from '@/hooks/useCourseWeather';
 
-type Weather = WindReading & { temperature: number; code: number };
 function condition(code: number) {
   if (code === 0) return 'Clear skies';
   if ([1, 2, 3].includes(code)) return 'Partly cloudy';
@@ -23,39 +23,13 @@ export function WeatherCard({ latitude, longitude, onWindChange }: {
   onWindChange?: (reading: WindReading | null) => void;
 }) {
   const colors = useColors();
-  const [weather, setWeather] = useState<Weather | null>(null);
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,wind_speed_10m,wind_direction_10m,weather_code&temperature_unit=celsius&wind_speed_unit=kmh&timezone=auto`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Weather request failed.');
-      const result = await response.json();
-      const current = result.current as { temperature_2m: number; wind_speed_10m: number; wind_direction_10m: number; weather_code: number };
-      const reading: Weather = {
-        temperature: current.temperature_2m,
-        windKph: current.wind_speed_10m,
-        windDirection: current.wind_direction_10m,
-        code: current.weather_code,
-      };
-      if (![reading.temperature, reading.windKph, reading.windDirection, reading.code].every(Number.isFinite)) {
-        throw new Error('Weather data is incomplete.');
-      }
-      setWeather(reading);
-      onWindChange?.({ windKph: reading.windKph, windDirection: reading.windDirection });
-    } catch {
-      setWeather(null);
-      onWindChange?.(null);
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [latitude, longitude, onWindChange]);
-
-  useEffect(() => { void load(); }, [load]);
+  const query = useCourseWeather(latitude, longitude);
+  const weather = query.isError ? null : query.data;
+  const error = query.isError;
+  const loading = query.isFetching;
+  useEffect(() => {
+    onWindChange?.(weather ? { windKph: weather.windKph, windDirection: weather.windDirection } : null);
+  }, [weather, onWindChange]);
   return (
     <Card style={styles.card}>
       <View style={styles.top}>
@@ -64,7 +38,7 @@ export function WeatherCard({ latitude, longitude, onWindChange }: {
           <Text style={[styles.heading, { color: colors.foreground }]}>COURSE WEATHER</Text>
           <Text style={[styles.sub, { color: colors.mutedForeground }]}>Open-Meteo · current course-area conditions</Text>
         </View>
-        <Pressable onPress={() => void load()} accessibilityRole="button" accessibilityLabel="Refresh weather" testID="weather-refresh" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -8 }}>
+        <Pressable onPress={() => void query.refetch()} accessibilityRole="button" accessibilityLabel="Refresh weather" testID="weather-refresh" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -8 }}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Feather name="refresh-cw" size={16} color={colors.mutedForeground} />}
         </Pressable>
       </View>

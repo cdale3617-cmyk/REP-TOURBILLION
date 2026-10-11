@@ -13,6 +13,9 @@ import { getRoundMapHeight } from '@/utils/roundViewport';
 import { getHoleMapLayout } from '@/utils/holeMapLayout';
 import { isCapricornBoundary, capricornChampionshipCourse } from '@/utils/capricornChampionship';
 import { courseMapHref, resolveMapCourse } from '@/utils/courseMapNavigation';
+import { useCourseWeather } from '@/hooks/useCourseWeather';
+import { useLiveGps } from '@/context/LiveGpsContext';
+import { getTargetDistance } from '@/utils/courseGeometry';
 
 export default function CourseMapScreen() {
   const colors = useColors();
@@ -27,11 +30,16 @@ export default function CourseMapScreen() {
   const course = useMemo(() => resolveMapCourse(params as Record<string, string | string[] | undefined>, courses), [params, courses]);
   const courseMap = useCourseMap(course);
   const geometry = courseMap.geometry;
+  const weather = useCourseWeather(geometry?.latitude ?? course?.latitude, geometry?.longitude ?? course?.longitude);
+  const { gps, now, enabled, setEnabled, error: gpsError } = useLiveGps();
   const holes = useMemo(() => [...(geometry?.holes ?? [])].sort((a, b) => a.hole - b.hole), [geometry]);
   const [picked, setPicked] = useState<{ courseId: string; hole: number } | null>(null);
   const pickedIndex = course && picked?.courseId === course.id ? holes.findIndex((h) => h.hole === picked.hole) : -1;
   const index = pickedIndex >= 0 ? pickedIndex : 0;
   const current = holes[index];
+  const distance = getTargetDistance(gps, current?.target, now);
+  const wind = weather.isError ? null : weather.data ?? null;
+  const position = distance.meters !== null ? gps : null;
   const go = (next: number) => { if (course && holes[next]) setPicked({ courseId: course.id, hole: holes[next].hole }); };
   const hasData = !!(courseMap.map || holes.length || geometry?.features?.length);
 
@@ -57,6 +65,9 @@ export default function CourseMapScreen() {
         <View style={styles.cell}><ActionButton secondary icon="chevron-left" title="Previous" testID="course-map-previous" disabled={!current || index <= 0} onPress={() => go(index - 1)} /></View>
         <View style={styles.cell}><ActionButton secondary icon="chevron-right" title="Next" testID="course-map-next" disabled={!current || index >= holes.length - 1} onPress={() => go(index + 1)} /></View>
       </View>
+      <ActionButton secondary icon="navigation" title={enabled ? 'Stop live GPS' : 'Enable live GPS'} testID="course-map-gps" onPress={() => setEnabled(!enabled)} />
+      {distance.meters === null ? <Text style={[styles.small, { color: colors.mutedForeground }]}>{gpsError || distance.reason}</Text> : null}
+      {!wind ? <Text style={[styles.small, { color: colors.mutedForeground }]}>{weather.isError ? 'Wind unavailable. No direction is assumed.' : 'Loading course-area wind…'}</Text> : null}
       <ActionButton icon="download" secondary testID="course-map-load" disabled={courseMap.busy}
         title={courseMap.busy ? 'Loading free course map…' : hasData ? 'Refresh free course map' : 'Load free course map'}
         onPress={() => void courseMap.load()} />
@@ -81,17 +92,17 @@ export default function CourseMapScreen() {
         <View style={styles.row}>
           <Label tone="primary">{current ? `Hole ${current.hole}` : 'No mapped hole'}</Label>
           <View style={{ flex: 1 }} />
-          <Label>{current ? (current.par ? `Par ${current.par}` : 'Par unknown') : 'North up'}</Label>
+          <Label>{current ? (current.par ? `Par ${current.par}` : 'Par unknown') : 'Tee to target'}</Label>
         </View>
         {current ? <Text testID="course-map-current-hole" accessibilityLabel={`Current hole ${current.hole}`} style={[styles.small, { color: colors.mutedForeground }]}>
           Current hole: {current.hole} · {index + 1} of {holes.length} mapped</Text> : null}
         {layout.sideBySide ? (
           <View style={styles.split}>
-            <View style={{ flex: 1, minWidth: 0 }}><HoleMap geometry={current} features={geometry?.features} availableHeight={mapHeight} /></View>
+            <View style={{ flex: 1, minWidth: 0 }}><HoleMap geometry={current} features={geometry?.features} availableHeight={mapHeight} position={position} wind={wind} /></View>
             <View style={{ flex: 1, minWidth: 0 }}>{controls}</View>
           </View>
         ) : <>
-          <HoleMap geometry={current} features={geometry?.features} availableHeight={mapHeight} />
+          <HoleMap geometry={current} features={geometry?.features} availableHeight={mapHeight} position={position} wind={wind} />
           {controls}
         </>}
       </Card>

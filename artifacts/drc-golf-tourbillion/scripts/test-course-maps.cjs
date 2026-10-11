@@ -83,8 +83,51 @@ test('Championship has 18 real offline paths, correct pars and no invented green
   assert.deepEqual(g.holes.map(h => h.par), [5,4,3,4,4,4,3,4,5,4,3,4,4,3,5,4,4,5]);
   assert.equal(g.holes.reduce((sum, h) => sum + h.par, 0), 72);
   assert.equal(new Set(g.holes.map(h => h.osmWayId)).size, 18);
-  assert.ok(g.holes.every(h => h.targetKind === 'path-end'));
+  assert.ok(g.holes.every(h => h.targetKind === 'green-reference'));
+  assert.equal(g.features.length, 18);
+  const { pointInMappedPolygon } = load('../utils/mappedPolygons.ts');
+  const { getHoleStrategies } = load('../utils/holeStrategies.ts');
+  for (const hole of g.holes) {
+    assert.equal(g.features.filter(f => pointInMappedPolygon(hole.target, f.rings)).length, 1,
+      'each unchanged endpoint must belong to one real green outline');
+    assert.deepEqual(hole.target, hole.path.at(-1), 'do not invent green centres');
+    assert.equal(getHoleStrategies(hole, g.features).safe, null, 'no fairway means no safe route');
+  }
   assert.equal(geometry.getCourseGeometry(championship.CAPRICORN_BOUNDARY_ID), null);
+});
+test('older Championship path-only cache gains reviewed greens without rewriting targets or the cache', () => {
+  const g = geometry.capricornChampionshipGeometry;
+  const older = { ...g, features: [], holes: g.holes.map(h => ({ ...h, targetKind: 'path-end' })) };
+  const before = JSON.stringify(older);
+  geometry.registerCourseGeometry(championship.CAPRICORN_CHAMPIONSHIP_ID, older);
+  const enriched = geometry.getCourseGeometry(championship.CAPRICORN_CHAMPIONSHIP_ID);
+  assert.equal(enriched.features.length, 18);
+  assert.ok(enriched.holes.every(h => h.targetKind === 'green-reference'));
+  assert.equal(JSON.stringify(older), before);
+  assert.deepEqual(enriched.holes.map(h => h.target), older.holes.map(h => h.target));
+});
+test('green polygon boundary vertices count as mapped references, without filling polygon islands', () => {
+  const { pointInMappedPolygon } = load('../utils/mappedPolygons.ts');
+  const ring = box(0, 0, 1).map(p => ({ latitude: p.lat, longitude: p.lon }));
+  const island = box(0.25, 0.25, 0.5).map(p => ({ latitude: p.lat, longitude: p.lon }));
+  assert.equal(pointInMappedPolygon(ring[0], [ring]), true);
+  assert.equal(pointInMappedPolygon({ latitude: 0.5, longitude: 0.5 }, [ring, island]), false);
+  assert.equal(pointInMappedPolygon({ latitude: 2, longitude: 2 }, [ring]), false);
+});
+test('strategies require complete real landing coverage and suppress a path crossing known hazards', () => {
+  const { getHoleStrategies } = load('../utils/holeStrategies.ts');
+  const coords = ring => ring.map(p => ({ latitude: p.lat, longitude: p.lon }));
+  const h = { hole: 1, osmWayId: '1', targetKind: 'green-reference',
+    path: coords([{ lat: 0.001, lon: 0.001 }, { lat: 0.002, lon: 0.003 }, { lat: 0.004, lon: 0.004 }]) };
+  h.target = h.path.at(-1);
+  const fairway = { id: 'fairway', kind: 'fairway', rings: [coords(box(0, 0, 0.005))] };
+  const green = { id: 'green', kind: 'green', rings: [coords(box(0.0035, 0.0035, 0.001))] };
+  assert.equal(getHoleStrategies(h, [green]).safe, null);
+  assert.equal(getHoleStrategies(h, [fairway]).aggressive, null);
+  assert.deepEqual(getHoleStrategies(h, [fairway, green]).safe, h.path);
+  assert.deepEqual(getHoleStrategies(h, [fairway, green]).aggressive, [h.path[0], h.target]);
+  const water = { id: 'water', kind: 'water', rings: [coords(box(0.0029, 0.0019, 0.0002))] };
+  assert.equal(getHoleStrategies(h, [fairway, green, water]).safe, null);
 });
 test('explicit Championship choice preserves scores, readings, history and pins', () => {
   const oldCourse = { ...championship.capricornChampionshipCourse,

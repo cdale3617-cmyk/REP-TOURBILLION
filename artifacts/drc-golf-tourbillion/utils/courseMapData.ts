@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { CourseGeometry, MapFeature, Coordinate, VerifiedHole } from './courseGeometry';
+import { pointInMappedPolygon } from './mappedPolygons';
 
 const coordinate = z.object({ latitude: z.number().finite().min(-90).max(90), longitude: z.number().finite().min(-180).max(180) });
 const ring = z.array(coordinate).min(4).max(12000).refine(r => r[0].latitude === r.at(-1)?.latitude && r[0].longitude === r.at(-1)?.longitude, 'Open map boundary');
@@ -71,13 +72,7 @@ function featureKind(t: Record<string, string>): MapFeature['kind'] | null {
 }
 
 function inside(point: Coordinate, rings: Coordinate[][]) {
-  let result = false;
-  for (const r of rings) for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
-    const a = r[i], b = r[j];
-    if ((a.latitude > point.latitude) !== (b.latitude > point.latitude)
-      && point.longitude < (b.longitude - a.longitude) * (point.latitude - a.latitude) / (b.latitude - a.latitude) + a.longitude) result = !result;
-  }
-  return result;
+  return pointInMappedPolygon(point, rings);
 }
 
 export function parseCourseMap(raw: unknown, courseId: string, osmKey: string, now = new Date()): DownloadedCourseMap {

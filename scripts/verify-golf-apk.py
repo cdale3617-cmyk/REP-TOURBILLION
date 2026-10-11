@@ -84,10 +84,18 @@ if args.previous:
             "course-map-current-hole",
             "course-name-map-",
             "hole-map-drawing",
+            "hole-map-missing-data",
+            "hole-map-strategies",
+            "hole-map-targets",
+            "course-map-gps",
+            "course-weather",
+            "green-edge",
             "#75D58A",
         ]
         source = json.loads(Path("artifacts/drc-golf-tourbillion/data/pacific-surfaces.json").read_text())
         required.extend(feature["id"] for feature in source["features"][:5])
+        championship = json.loads(Path("artifacts/drc-golf-tourbillion/data/capricorn-surfaces.json").read_text())
+        required.extend(feature["id"] for feature in championship["features"])
         for marker in required:
             if marker.encode() not in bundle:
                 raise ValueError(f"New map code/data missing from embedded bundle: {marker}")

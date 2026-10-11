@@ -8,8 +8,9 @@ const LiveGpsContext = createContext<LiveGpsValue | null>(null);
 export function LiveGpsProvider({ children }: { children: React.ReactNode }) {
   const [requested, setRequested] = useState(false);
   const pathname = usePathname();
-  // One foreground session shared by Home and Round. Other tools pause it.
-  const onGolfScreen = pathname === '/' || pathname === '/round';
+  // One foreground session shared by Home, Round and the read-only hole viewer.
+  // Unrelated tools still pause location; backgrounding stops it in the hook.
+  const onGolfScreen = pathname === '/' || pathname === '/round' || pathname === '/course-map';
   const position = useDevicePosition(requested && onGolfScreen);
   return <LiveGpsContext.Provider value={{ ...position, enabled: requested, setEnabled: setRequested }}>{children}</LiveGpsContext.Provider>;
 }

@@ -1,6 +1,7 @@
 import pacificHoles from '../data/pacific-holes.json';
 import pacificSurfaces from '../data/pacific-surfaces.json';
 import capricornData from '../data/capricorn-championship.json';
+import capricornSurfaces from '../data/capricorn-surfaces.json';
 
 export type Coordinate = { latitude: number; longitude: number };
 export type MapFeature = {
@@ -47,20 +48,48 @@ const pacific: CourseGeometry = {
 const championshipHoles: VerifiedHole[] = capricornData.holes.map(item => {
   const path = item.path.map(([latitude, longitude]) => ({ latitude, longitude }));
   return { hole: item.hole, par: item.par, osmWayId: item.osmWayId, path,
-    target: path[path.length - 1], targetKind: 'path-end' };
+    target: path[path.length - 1], targetKind: 'green-reference' };
 });
 const championshipPoints = championshipHoles.flatMap(hole => hole.path);
 export const capricornChampionshipGeometry: CourseGeometry = {
-  holes: championshipHoles, features: [],
+  holes: championshipHoles,
+  features: capricornSurfaces.features.map((feature): MapFeature => ({
+    id: feature.id, kind: 'green',
+    rings: feature.rings.map(ring => ring.map(([latitude, longitude]) => ({ latitude, longitude }))),
+  })),
   latitude: (Math.min(...championshipPoints.map(p => p.latitude)) + Math.max(...championshipPoints.map(p => p.latitude))) / 2,
   longitude: (Math.min(...championshipPoints.map(p => p.longitude)) + Math.max(...championshipPoints.map(p => p.longitude))) / 2,
   checkedAt: capricornData.retrievedAt,
-  source: 'OpenStreetMap · reviewed Championship paths',
+  source: 'OpenStreetMap · reviewed Championship paths and green edges',
   sourceUrl: 'https://www.openstreetmap.org/way/332993065',
 };
 const downloaded = new Map<string, CourseGeometry>();
 export function registerCourseGeometry(courseId: string, geometry: CourseGeometry) {
-  downloaded.set(canonicalCourseId(courseId), geometry);
+  const id = canonicalCourseId(courseId);
+  if (id === capricornData.courseId) {
+    const incoming = geometry.features ?? [];
+    const supplements = (capricornChampionshipGeometry.features ?? []).filter(f =>
+      !incoming.some(existing => existing.id === f.id)
+      && geometry.holes.some(h => {
+        const reviewed = championshipHoles.find(known => known.hole === h.hole && known.osmWayId === h.osmWayId);
+        return reviewed && h.target.latitude === reviewed.target.latitude
+          && h.target.longitude === reviewed.target.longitude
+          && f.rings.some(ring => ring.some(p => p.latitude === h.target.latitude && p.longitude === h.target.longitude));
+      }));
+    if (supplements.length) {
+      const features = [...incoming, ...supplements];
+      geometry = {
+        ...geometry, features,
+        holes: geometry.holes.map(h => ({
+          ...h, targetKind: h.targetKind === 'green-reference' || features.some(f => f.kind === 'green'
+            && f.rings.some(ring => ring.some(p => p.latitude === h.target.latitude && p.longitude === h.target.longitude)))
+            ? 'green-reference' : 'path-end',
+        })),
+        source: `${geometry.source} + reviewed offline green outlines`,
+      };
+    }
+  }
+  downloaded.set(id, geometry);
 }
 
 export function getCourseGeometry(courseId?: string): CourseGeometry | null {

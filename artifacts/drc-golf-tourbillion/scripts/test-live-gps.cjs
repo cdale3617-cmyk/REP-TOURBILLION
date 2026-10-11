@@ -121,5 +121,11 @@ test('map budget adapts to short phones, safe areas and text scale without overf
   }
   assert.ok(getRoundMapHeight(640) < getRoundMapHeight(915));
   assert.ok(getRoundMapHeight(780, 1.3) < getRoundMapHeight(780, 1));
-  assert.ok(getRoundMapHeight(1280) <= 360, 'Tablet map must not become an excessively tall panel');
+  assert.ok(getRoundMapHeight(1280) <= 560, 'Tablet map must not become an excessively tall panel');
+});
+test('read-only course maps may use the same foreground GPS session without enabling it automatically', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../context/LiveGpsContext.tsx'), 'utf8');
+  assert.match(source, /pathname === '\/course-map'/);
+  assert.match(source, /useState\(false\)/);
+  assert.match(source, /useDevicePosition\(requested && onGolfScreen\)/);
 });

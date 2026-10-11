@@ -13,7 +13,7 @@ const loaded = new Module(filename, module);
 loaded.filename = filename;
 loaded.paths = module.paths;
 loaded._compile(compiled, filename);
-const { getHoleMapLayout, getHoleFocusClip } = loaded.exports;
+const { getHoleMapLayout, getHoleFocusClip, createHoleProjection, bearingDegrees, screenAngle } = loaded.exports;
 const windFilename = path.resolve(__dirname, '../utils/wind.ts');
 const compiledWind = ts.transpileModule(fs.readFileSync(windFilename, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true },
@@ -59,7 +59,8 @@ test('phone maps leave room for hole controls and keep their canvas matched to t
   for (const [width, height] of [[200, 800], [360, 780], [392, 852], [440, 800]]) {
     const layout = getHoleMapLayout(width, height);
     assert.equal(layout.sideBySide, false);
-    assert.ok(layout.frameHeight <= 340);
+    assert.ok(layout.frameHeight <= 620);
+    assert.ok(layout.frameHeight >= Math.min(220, height * 0.9));
     assert.ok(layout.frameHeight <= height * 0.9);
     assertMapCanvasMatchesPanel(layout);
   }
@@ -119,7 +120,7 @@ test('very short and very wide viewports keep the canvas positive and within ava
 test('invalid window measurements fall back to a usable phone layout', () => {
   const layout = getHoleMapLayout(Number.NaN, 0);
   assert.equal(layout.sideBySide, false);
-  assert.equal(layout.frameHeight, 320);
+  assert.equal(layout.frameHeight, 496);
   assertMapCanvasMatchesPanel(layout);
 });
 
@@ -139,4 +140,28 @@ test('wind animation cadence follows speed without becoming too fast or stopping
   assert.equal(windAnimationDuration(8), 3960);
   assert.equal(windAnimationDuration(100), 1100);
   assert.equal(windAnimationDuration(Number.NaN), 5000);
+});
+test('single-hole projection puts the target up with equal scales', () => {
+  const tee = { latitude: -23, longitude: 150 };
+  const plot = { left: 0, top: 0, width: 200, height: 400 };
+  for (const [dn, de] of [[0.002, 0], [0, 0.002], [-0.002, 0], [0.001, -0.001]]) {
+    const target = { latitude: tee.latitude + dn, longitude: tee.longitude + de };
+    const pr = createHoleProjection([tee, target], target, [], plot);
+    const a = pr.project(tee), b = pr.project(target);
+    assert.ok(Math.abs(a.x - b.x) < 1e-6, 'target directly above tee');
+    assert.ok(b.y < a.y);
+    const east = pr.project({ latitude: tee.latitude, longitude: tee.longitude + 0.001 });
+    const north = pr.project({ latitude: tee.latitude + 0.001, longitude: tee.longitude });
+    const mE = Math.hypot(east.x - a.x, east.y - a.y) / 0.001 / Math.cos(tee.latitude * Math.PI / 180);
+    assert.ok(Math.abs(mE - Math.hypot(north.x - a.x, north.y - a.y) / 0.001) < 1e-6, 'equal geographic scales');
+  }
+});
+
+test('wind and north use the actual map heading', () => {
+  assert.equal(bearingDegrees({ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 1 }), 90);
+  assert.equal(screenAngle(0, 90), 270, 'north points left when the hole plays east');
+  // wind from the south (flow 0) on a hole playing north blows with the golfer: arrow up.
+  assert.equal(screenAngle(windFlowDirectionDegrees(180), 0), 0);
+  // same wind on a hole playing south blows toward the tee: arrow points down on screen.
+  assert.equal(screenAngle(windFlowDirectionDegrees(180), 180), 180);
 });

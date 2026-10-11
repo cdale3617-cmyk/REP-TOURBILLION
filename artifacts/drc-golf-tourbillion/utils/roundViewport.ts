@@ -13,6 +13,7 @@ export function getRoundMapHeight(
     ? (screenHeight < 700 ? 16 : Math.min(67, screenHeight * 0.07))
     : Math.max(topInset, 12) + (screenHeight < 700 ? 4 : 8);
   const tabs = web ? 84 : 62 + bottomInset;
-  const controlsAndHeading = (landscape ? 145 : 345) * scale;
-  return Math.max(48, Math.min(360, Math.floor(screenHeight - top - tabs - controlsAndHeading - 24)));
+  // Secondary map details scroll below the drawing instead of shrinking it.
+  const controlsAndHeading = (landscape ? 145 : 250) * scale;
+  return Math.max(48, Math.min(560, Math.floor(screenHeight - top - tabs - controlsAndHeading - 24)));
 }

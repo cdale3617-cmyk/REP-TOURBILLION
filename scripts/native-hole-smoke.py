@@ -4,6 +4,7 @@ Emulator evidence is not physical Samsung or on-course GPS verification.
 """
 import json
 import re
+import struct
 import subprocess
 import time
 import xml.etree.ElementTree as ET
@@ -12,6 +13,7 @@ from pathlib import Path
 out = Path("generated-artifacts/native-hole-tests")
 out.mkdir(parents=True, exist_ok=True)
 package = "com.drc.golftourbillion"
+screen_width, screen_height = 1440, 3120
 
 
 def adb(*args):
@@ -30,20 +32,26 @@ def text(root):
 
 
 def scroll(up=False):
-    adb("shell", "input", "swipe", "540", "650" if up else "1850",
-        "540", "1850" if up else "650", "350")
-    time.sleep(0.3)
+    x = str(screen_width // 2)
+    a, b = int(screen_height * 0.30), int(screen_height * 0.70)
+    adb("shell", "input", "swipe", x, str(a if up else b),
+        x, str(b if up else a), "900")
+    time.sleep(1.5)
 
 
 def find_button(label):
+    ids = {"Next": "course-map-next", "Previous": "course-map-previous",
+           "Enable live GPS": "course-map-gps", "Stop live GPS": "course-map-gps"}
     for _ in range(6):
         root = dump()
         for n in root.iter("node"):
-            if n.get("content-desc", "").casefold() == label.casefold() or n.get("text", "").casefold() == label.casefold():
+            resource = n.get("resource-id", "").split("/")[-1]
+            matches = resource == ids.get(label) or n.get("text", "").casefold() == label.casefold()
+            if matches:
                 bounds = re.findall(r"\d+", n.get("bounds", ""))
                 if len(bounds) == 4:
                     a, b, c, d = map(int, bounds)
-                    if 0 <= b < d <= 2400:
+                    if 100 <= b < d <= screen_height - 150 and d - b >= 20:
                         return ((a + c) // 2, (b + d) // 2)
         scroll()
     raise AssertionError(f"Native button not reachable: {label}")
@@ -52,7 +60,7 @@ def find_button(label):
 def tap(label):
     x, y = find_button(label)
     adb("shell", "input", "tap", str(x), str(y))
-    time.sleep(0.4)
+    time.sleep(1)
 
 
 def capture(name):
@@ -78,8 +86,12 @@ def open_course(course):
 
 
 try:
-    adb("shell", "wm", "size", "1080x2400")
-    adb("shell", "wm", "density", "420")
+    # The AVD profile supplies a real 1440x3120 display. Do not use a wm
+    # override: it can change accessibility coordinates without the framebuffer.
+    adb("shell", "wm", "size", "reset")
+    adb("shell", "wm", "density", "560")
+    screen_width, screen_height = struct.unpack(">II", adb("exec-out", "screencap", "-p")[16:24])
+    assert (screen_width, screen_height) == (1440, 3120), (screen_width, screen_height)
     adb("shell", "pm", "grant", package, "android.permission.ACCESS_FINE_LOCATION")
     adb("shell", "pm", "grant", package, "android.permission.ACCESS_COARSE_LOCATION")
     adb("shell", "settings", "put", "secure", "location_mode", "3")
@@ -100,9 +112,15 @@ try:
     previous = capture("championship-17")
     assert re.search(r"Current hole:?\s*17\b", previous, re.I), previous
     # GPS is injected by the emulator, not a golfer's physical position.
-    adb("emu", "geo", "fix", "150.75047", "-23.05807")
     tap("Enable live GPS")
-    time.sleep(5)
+    for _ in range(3):
+        if re.search(r"Stop live GPS", text(dump()), re.I):
+            break
+        tap("Enable live GPS")
+    assert re.search(r"Stop live GPS", text(dump()), re.I), "GPS toggle was not activated"
+    for _ in range(3):
+        adb("emu", "geo", "fix", "150.75047", "-23.05807")
+        time.sleep(2)
     gps = capture("emulator-gps")
     assert re.search(r"Green ref\s*\d+\s*m\b", gps, re.I), gps
     tap("Stop live GPS")
@@ -116,7 +134,7 @@ try:
     assert "FATAL EXCEPTION" not in log, log
     (out / "results.json").write_text(json.dumps({
         "status": "passed", "platform": "Android emulator, API 35",
-        "screen": "1080x2400, density 420 (S24-sized logical viewport)",
+        "screen": f"{screen_width}x{screen_height}, density 560 (S24 Ultra-sized viewport)",
         "checked": ["Championship 1/2/18 pars and viewer", "Next/Previous",
                     "Pacific course switch", "emulator location distance", "native startup"],
         "not_checked": ["physical Samsung hardware", "real on-course GPS accuracy"],

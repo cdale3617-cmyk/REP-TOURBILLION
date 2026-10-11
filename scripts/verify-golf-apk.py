@@ -97,7 +97,9 @@ if args.previous:
         championship = json.loads(Path("artifacts/drc-golf-tourbillion/data/capricorn-surfaces.json").read_text())
         required.extend(feature["id"] for feature in championship["features"])
         for marker in required:
-            if marker.encode() not in bundle:
+            # Hermes stores strings containing non-ASCII characters as UTF-16;
+            # a marker inside such a caption is not necessarily an UTF-8 slice.
+            if marker.encode() not in bundle and marker.encode("utf-16-le") not in bundle:
                 raise ValueError(f"New map code/data missing from embedded bundle: {marker}")
 print(json.dumps({"apk": str(args.output), "sha256": checksum, "certificateSha256": certificate,
                   "previousSigningIdentityMatches": bool(args.previous)}, indent=2))

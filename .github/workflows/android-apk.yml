@@ -90,7 +90,7 @@ jobs:
         # The release variant embeds JavaScript and does not require Metro.
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64 --no-daemon --stacktrace
 
       - name: Verify APK signature, package and embedded bundle
         run: |
@@ -129,12 +129,20 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - name: Preserve build for verification retries
+        uses: actions/upload-artifact@v4
+        with:
+          name: Built-APK-awaiting-native-verification
+          path: android-installer/
+          retention-days: 2
+
       - name: Test installed Android hole maps
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           target: google_apis
           arch: x86_64
+          profile: pixel_7_pro
           disable-animations: true
           script: |
             adb install -r android-installer/DRC-Golf-Tourbillion.apk

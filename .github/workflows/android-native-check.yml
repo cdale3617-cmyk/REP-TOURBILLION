@@ -1,0 +1,62 @@
+name: Verify an existing DRC Golf APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      apk_run:
+        description: Build run containing the unchanged APK to verify
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Built-APK-awaiting-native-verification
+          run-id: ${{ inputs.apk_run }}
+          github-token: ${{ github.token }}
+          path: android-installer
+      - name: Check unchanged installer checksum
+        working-directory: android-installer
+        run: sha256sum -c SHA256SUMS.txt
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify installed APK on Samsung-sized display
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disable-animations: true
+          script: |
+            adb install -r android-installer/DRC-Golf-Tourbillion.apk
+            python3 scripts/native-hole-smoke.py
+      - name: Native evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Native-hole-test-evidence
+          path: generated-artifacts/native-hole-tests/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Verified installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: DRC-Golf-Tourbillion-Android
+          path: android-installer/
+          retention-days: 14

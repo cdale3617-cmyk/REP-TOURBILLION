@@ -75,6 +75,10 @@ def capture(name):
 def open_course(course):
     adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d",
         f"drc-golf-tourbillion://course-map?courseId={course}", package)
+    # A Pixel Launcher ANR can remain above the successfully opened app on a
+    # cold QHD emulator. Stop only the launcher, never suppress an app failure.
+    adb("shell", "am", "force-stop", "com.google.android.apps.nexuslauncher")
+    adb("shell", "am", "force-stop", "com.android.launcher3")
     for _ in range(40):
         time.sleep(1)
         try:
@@ -122,7 +126,8 @@ try:
         adb("emu", "geo", "fix", "150.75047", "-23.05807")
         time.sleep(2)
     gps = capture("emulator-gps")
-    assert re.search(r"Green ref\s*\d+\s*m\b", gps, re.I), gps
+    reading = re.search(r"Green ref\s*(\d+)\s*m\b", gps, re.I)
+    assert reading and int(reading.group(1)) <= 30, gps
     tap("Stop live GPS")
     open_course("pacific-golf-club")
     pacific = capture("pacific-1")

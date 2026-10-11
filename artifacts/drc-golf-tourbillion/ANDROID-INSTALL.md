@@ -35,10 +35,14 @@ Samsung account password is needed in DRC.
 - Android package: `com.drc.golftourbillion`.
 - Display name: `DRC Golf Tempo`. Technical identifiers and the established backup
   marker retain their original values to preserve saved data and backup compatibility.
-- App version: `1.0.3`; Android version code: `4`. The More screen displays both
+- App version: `1.0.4`; Android version code: `5`. The More screen displays both
   values so an installed build can be distinguished from an older download.
 - Keep the package ID and signing identity unchanged for future updates.
 - No account, backend or secrets are needed for the implemented golf features.
+- Lab includes Personalised Training: saved weekly goals, explained drill suggestions,
+  editable/deletable self-reported sessions, earlier-week progress and same-distance
+  putting comparisons. Training is included in the existing local JSON backup;
+  older backups start with empty training history. Effort logs do not prove skill improvement.
 - Android automatic backup is disabled; use explicit golf JSON and video exports.
 - Camera and foreground location are requested when used.
 - Gallery selection uses Android's system picker without broad library access.

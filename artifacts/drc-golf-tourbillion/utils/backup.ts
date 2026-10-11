@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { GolfState, HoleScore, HolePerformance } from '@/context/GolfContext';
 import { GREEN_PHOTO_PATTERN } from './greenPhotoReference';
+import { trainingStateSchema } from './training';
 
 const id = z.string().min(1).max(200);
 const text = z.string().max(20000);
@@ -77,6 +78,7 @@ const dailyPin = z.object({
     && expires > captured && expires - captured <= 86400000;
 }, 'Invalid pin capture timing');
 export const golfStateSchema = z.object({
+  training: trainingStateSchema.default({ plans: [], sessions: [] }),
   playerName: z.string().min(1).max(100), unit: z.enum(['m', 'yd']), lastCourseId: id,
   courses: z.array(z.object({
     id, name: z.string().min(1).max(200), area: text, par: z.number().int().min(1).max(180),

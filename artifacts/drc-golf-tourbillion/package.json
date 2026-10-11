@@ -10,8 +10,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:bag": "node scripts/test-bag-layout.cjs",
     "test:gps": "node scripts/test-live-gps.cjs",
+    "test:training": "node scripts/test-training.cjs",
     "check:android": "node scripts/check-android.cjs",
-    "test": "node scripts/test-live-gps.cjs && node scripts/test-device-readings.cjs && node scripts/test-course-geometry.cjs && node scripts/test-daily-pin.cjs && node scripts/test-hole-map-layout.cjs && node scripts/test-caddie-advice.cjs && node scripts/test-manual-metrics.cjs && node scripts/test-phone-motion.cjs && node scripts/test-green-photos.cjs && node scripts/test-round-performance.cjs && node scripts/test-appearance.cjs"
+    "test": "node scripts/test-live-gps.cjs && node scripts/test-device-readings.cjs && node scripts/test-course-geometry.cjs && node scripts/test-daily-pin.cjs && node scripts/test-hole-map-layout.cjs && node scripts/test-caddie-advice.cjs && node scripts/test-manual-metrics.cjs && node scripts/test-phone-motion.cjs && node scripts/test-green-photos.cjs && node scripts/test-round-performance.cjs && node scripts/test-appearance.cjs && node scripts/test-training.cjs"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

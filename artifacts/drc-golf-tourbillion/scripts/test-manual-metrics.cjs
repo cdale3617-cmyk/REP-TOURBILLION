@@ -18,7 +18,7 @@ referenceModule._compile(ts.transpileModule(fs.readFileSync(referenceFilename, '
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText, referenceFilename);
 const originalRequire = loaded.require.bind(loaded);
-loaded.require = name => name === './greenPhotoReference' ? referenceModule.exports : originalRequire(name);
+loaded.require = name => name === './greenPhotoReference' ? referenceModule.exports : name === './training' ? require('./load-training.cjs') : originalRequire(name);
 loaded._compile(compiled, filename);
 const { createBackup, parseBackup, validateGolfState, golfActivityMetricsSchema } = loaded.exports;
 

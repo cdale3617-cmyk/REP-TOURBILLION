@@ -8,6 +8,13 @@ export type AppTool = {
 
 export const labTools: AppTool[] = [
   {
+    slug: 'training-plan',
+    title: 'Personalised Training',
+    icon: 'calendar',
+    description: 'A weekly plan from your recorded data, with logged sessions and weekly history.',
+    howTo: ['Save a weekly plan, then log sessions you actually complete.', 'Logged sessions show effort, not improved skill.'],
+  },
+  {
     slug: 'swing-monitor',
     title: 'Swing Monitor',
     icon: 'video',

@@ -19,6 +19,7 @@ import { GreenReadings } from '@/components/GreenReadings';
 import { ManualHealthHistory } from '@/components/ManualHealthHistory';
 import { SavedRoundPerformanceEditor } from '@/components/HolePerformanceEditor';
 import { RoundPerformanceCoach } from '@/components/RoundPerformanceCoach';
+import { TrainingCoach } from '@/components/TrainingCoach';
 import { WeatherCard } from '@/components/WeatherCard';
 import { ShotConditionsPicker } from '@/components/ShotConditionsPicker';
 import { describeShotConditions, type ShotConditions } from '@/utils/shotConditions';
@@ -160,6 +161,8 @@ export default function ToolScreen() {
   if (!tool) {
     return <Page><PageHeading title="Tool not found" /><ActionButton title="Back to Lab" onPress={() => router.replace('/lab')} /></Page>;
   }
+
+  if (slug === 'training-plan') return <TrainingCoach />;
 
   function logPractice(title: string, activityNote: string, value?: number, side?: number) {
     golf.addActivity({ tool: slug, title, note: activityNote, value, lateral: side });

@@ -15,7 +15,7 @@ function load(relative, dependencies = {}) {
   loaded.filename = filename;
   loaded.paths = Module._nodeModulePaths(path.dirname(filename));
   const original = loaded.require.bind(loaded);
-  loaded.require = name => name in dependencies ? dependencies[name] : original(name);
+  loaded.require = name => name in dependencies ? dependencies[name] : name === './training' || name === '@/utils/training' ? require('./load-training.cjs') : original(name);
   loaded._compile(compiled, filename);
   return loaded.exports;
 }

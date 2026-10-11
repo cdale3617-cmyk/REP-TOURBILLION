@@ -5,6 +5,7 @@ import { validateGolfState, validateHolePerformance } from '@/utils/backup';
 import type { ShotConditions } from '@/utils/shotConditions';
 import type { PhoneMotionSummary } from '@/utils/phoneMotion';
 import { useDeviceReadings } from './useDeviceReadings';
+import { getTrainingWeekKey, trainingPlanSchema, trainingSessionSchema, type TrainingPlan, type TrainingSession, type TrainingState } from '@/utils/training';
 
 export type Club = {
   id: string;
@@ -82,6 +83,7 @@ export type BiometricEntry = {
 };
 
 export type GolfState = {
+  training: TrainingState;
   playerName: string;
   unit: 'm' | 'yd';
   lastCourseId: string;
@@ -97,6 +99,10 @@ export type GolfState = {
 };
 
 type GolfContextValue = GolfState & {
+  saveTrainingPlan: (plan: TrainingPlan) => void;
+  logTrainingSession: (session: Omit<TrainingSession, 'id' | 'createdAt'>) => void;
+  updateTrainingSession: (id: string, patch: Pick<TrainingSession, 'drillId' | 'durationMinutes' | 'note'>) => void;
+  removeTrainingSession: (id: string) => void;
   deviceReadings: ReturnType<typeof useDeviceReadings>;
   isReady: boolean;
   storageError: string;
@@ -160,6 +166,7 @@ const initialState: GolfState = {
   checklist: [],
   wedgeMatrix: {},
   dailyPins: [],
+  training: { plans: [], sessions: [] },
 };
 
 const GolfContext = createContext<GolfContextValue | null>(null);
@@ -214,11 +221,48 @@ export function GolfProvider({ children }: { children: ReactNode }) {
     }
   }, [isReady, state, storageEnabled]);
 
+  function ensureTrainingEditable() {
+    if (!isReady || !storageEnabled || storageError) throw new Error('Resolve the local storage warning before saving training changes.');
+  }
+
   const value = useMemo<GolfContextValue>(() => ({
     ...state,
     deviceReadings,
     isReady,
     storageError,
+    saveTrainingPlan: (plan) => {
+      ensureTrainingEditable();
+      const checked = trainingPlanSchema.parse(plan);
+      if (checked.weekKey !== getTrainingWeekKey()) throw new Error('Create or edit a plan for the current week.');
+      if (state.training.sessions.some(s => s.weekKey === checked.weekKey && !checked.drillIds.includes(s.drillId))) throw new Error('Keep drills that already have saved sessions in this week’s plan.');
+      setState(current => ({
+        ...current,
+        training: { ...current.training, plans: [...current.training.plans.filter(p => p.weekKey !== checked.weekKey), checked] },
+      }));
+    },
+    logTrainingSession: (input) => {
+      ensureTrainingEditable();
+      const checked = trainingSessionSchema.parse({
+        ...input, id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`, createdAt: new Date().toISOString(),
+      });
+      const plan = state.training.plans.find(p => p.weekKey === checked.weekKey);
+      if (checked.weekKey !== getTrainingWeekKey() || !plan || !plan.drillIds.includes(checked.drillId)) throw new Error('Save this week’s plan before logging its drills.');
+      setState(current => ({ ...current, training: { ...current.training, sessions: [...current.training.sessions, checked] } }));
+    },
+    updateTrainingSession: (id, patch) => {
+      ensureTrainingEditable();
+      const existing = state.training.sessions.find(s => s.id === id);
+      if (!existing) throw new Error('That session no longer exists.');
+      const checked = trainingSessionSchema.parse({ ...existing, ...patch, id: existing.id, weekKey: existing.weekKey, createdAt: existing.createdAt });
+      const plan = state.training.plans.find(p => p.weekKey === existing.weekKey);
+      if (!plan?.drillIds.includes(checked.drillId)) throw new Error('Choose a drill from this session’s saved plan.');
+      setState(current => ({ ...current, training: { ...current.training, sessions: current.training.sessions.map(s => s.id === id ? checked : s) } }));
+    },
+    removeTrainingSession: (id) => {
+      ensureTrainingEditable();
+      if (!state.training.sessions.some(s => s.id === id)) throw new Error('That session no longer exists.');
+      setState(current => ({ ...current, training: { ...current.training, sessions: current.training.sessions.filter(s => s.id !== id) } }));
+    },
     restoreSnapshot: async (snapshot) => {
       const checked = validateGolfState(snapshot);
       setIsReady(false);

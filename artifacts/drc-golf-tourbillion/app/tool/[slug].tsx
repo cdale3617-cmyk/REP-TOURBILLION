@@ -13,7 +13,7 @@ import { labTools, moreTools, preRoundItems } from '@/data/catalog';
 import { useColors } from '@/hooks/useColors';
 import { WedgeMatrixCard } from '@/components/WedgeMatrixCard';
 import { canonicalCourseId, getCourseGeometry } from '@/utils/courseGeometry';
-import { courseSearchQuery, parseCourseDirectory, queryOverpass } from '@/utils/courseMapApi';
+import { courseSearchQuery, searchCourseDirectory } from '@/utils/courseMapApi';
 import { golfActivityMetricsSchema } from '@/utils/backup';
 import { summarizePhoneMotion, type MotionVector3 } from '@/utils/phoneMotion';
 import { GreenReadings } from '@/components/GreenReadings';
@@ -336,15 +336,14 @@ export default function ToolScreen() {
   }
 
   async function searchWorldwideCourses() {
-    let query: string;
-    try { query = courseSearchQuery(courseNameQuery); } catch (e) { setMessage(e instanceof Error ? e.message : 'Enter a course name.'); return; }
+    try { courseSearchQuery(courseNameQuery); } catch (e) { setMessage(e instanceof Error ? e.message : 'Enter a course name.'); return; }
     directoryRequest.current?.abort();
     const controller = new AbortController();
     directoryRequest.current = controller;
     const timer = setTimeout(() => controller.abort(), 35000);
     setFindingCourses(true); setMessage(''); setDiscovered([]);
     try {
-      const courses = parseCourseDirectory(await queryOverpass(query, controller.signal, Platform.OS !== 'web'));
+      const courses = await searchCourseDirectory(courseNameQuery, controller.signal, Platform.OS !== 'web');
       if (directoryRequest.current !== controller) return;
       setDiscovered(courses);
       setMessage(courses.length ? `Found ${courses.length} worldwide matches. Similar names can refer to different courses; check location before starting.`

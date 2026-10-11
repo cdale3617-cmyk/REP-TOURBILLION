@@ -2,12 +2,14 @@ import type { GolfCourse } from '../context/GolfContext';
 import { canonicalCourseId } from './courseGeometry';
 import { parseCourseMap, type OsmElement } from './courseMapData';
 
-export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+// Free global OSM service; no account, API key or paid map subscription.
+// Provider policy: https://wiki.openstreetmap.org/wiki/Overpass_API
+export const OVERPASS_URL = 'https://maps.mail.ru/osm/tools/overpass/api/interpreter';
 export async function queryOverpass(query: string, signal: AbortSignal, native = false, fetcher = fetch): Promise<unknown> {
   const response = await fetcher(OVERPASS_URL, {
     method: 'POST', signal,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded',
-      ...(native ? { 'User-Agent': 'DRC-Golf-Tempo/1.0 (personal on-demand golf course maps)' } : {}) },
+      ...(native ? { 'User-Agent': 'DRC-Golf-Tempo/1.0.6 (+https://github.com/cdale3617-cmyk/REP-TOURBILLION; personal on-demand golf course maps)' } : {}) },
     body: `data=${encodeURIComponent(query)}`,
   }).catch(e => {
     if (signal.aborted) throw e;
@@ -20,10 +22,19 @@ export async function queryOverpass(query: string, signal: AbortSignal, native =
 }
 const literal = (value: string) => JSON.stringify(value);
 const regex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-export function courseSearchQuery(name: string) {
+export function courseSearchQuery(name: string, exact = false) {
   const clean = name.trim();
   if (clean.length < 3 || clean.length > 100) throw new Error('Enter a course name between 3 and 100 characters.');
+  if (exact) {
+    // Exact tag lookups avoid scanning the worldwide name index.
+    return `[out:json][timeout:20];nwr["leisure"="golf_course"]["name"=${literal(clean)}];out center tags 40;`;
+  }
   return `[out:json][timeout:20];nwr["leisure"="golf_course"]["name"~${literal(regex(clean))},i];out center tags 40;`;
+}
+export async function searchCourseDirectory(name: string, signal: AbortSignal, native = false, fetcher = fetch): Promise<GolfCourse[]> {
+  const exact = parseCourseDirectory(await queryOverpass(courseSearchQuery(name, true), signal, native, fetcher));
+  if (exact.length) return exact;
+  return parseCourseDirectory(await queryOverpass(courseSearchQuery(name), signal, native, fetcher));
 }
 export function parseCourseDirectory(raw: unknown): GolfCourse[] {
   const data = raw as { remark?: string; elements?: OsmElement[] } | null;
@@ -58,7 +69,7 @@ export async function downloadCourseMap(course: GolfCourse, signal: AbortSignal,
   const id = canonicalCourseId(course.id);
   let key = id === 'pacific-golf-club' ? 'relation-1668736' : /^osm-(way|relation)-[1-9]\d{0,14}$/.test(id) ? id.slice(4) : '';
   if (!key) {
-    const result = parseCourseDirectory(await queryOverpass(courseSearchQuery(course.name), signal, native, fetcher));
+    const result = await searchCourseDirectory(course.name, signal, native, fetcher);
     const normal = (s: string) => s.trim().toLocaleLowerCase();
     const matches = result.filter(c => normal(c.name) === normal(course.name)
       && Math.abs(c.latitude - course.latitude) < 0.03 && Math.abs(c.longitude - course.longitude) < 0.03

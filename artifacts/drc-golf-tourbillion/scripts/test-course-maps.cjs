@@ -110,16 +110,58 @@ test('downloads use selected OSM identity, propagate provider failure, and respe
   const course = { id: 'osm-way-10', name: 'Fixture Club', latitude: -27.99, longitude: 153.01 };
   let request;
   const result = await api.downloadCourseMap(course, new AbortController().signal, true, async (url, options) => {
+    assert.equal(url, 'https://maps.mail.ru/osm/tools/overpass/api/interpreter');
     request = options; return new Response(JSON.stringify(raw), { status: 200 });
   });
   assert.equal(result.osmKey, 'way-10');
   assert.ok(decodeURIComponent(request.body).includes('way(10)'));
   assert.ok(request.headers['User-Agent'].includes('DRC-Golf-Tempo'));
+  assert.ok(request.headers['User-Agent'].includes('github.com/cdale3617-cmyk/REP-TOURBILLION'));
   await assert.rejects(api.downloadCourseMap(course, new AbortController().signal, false, async () => new Response('', { status: 504 })), /unavailable/);
   const controller = new AbortController(); controller.abort();
   await assert.rejects(api.downloadCourseMap(course, controller.signal, false, async (_, options) => {
     if (options.signal.aborted) throw new Error('cancelled');
   }), /cancelled/);
+});
+test('free map server requests preserve cancellation, use POST, and never override browser identity', async () => {
+  const controller = new AbortController();
+  const result = await api.queryOverpass(api.courseSearchQuery('Mercure Capricorn Resort'), controller.signal, false, async (url, options) => {
+    assert.equal(url, api.OVERPASS_URL);
+    assert.equal(options.signal, controller.signal);
+    assert.equal(options.method, 'POST');
+    assert.equal(options.headers['Content-Type'], 'application/x-www-form-urlencoded');
+    assert.equal(options.headers['User-Agent'], undefined);
+    assert.ok(new URLSearchParams(options.body).get('data').includes('Mercure Capricorn Resort'));
+    return new Response(JSON.stringify({ elements: [] }), { status: 200 });
+  });
+  assert.deepEqual(result, { elements: [] });
+  await assert.rejects(api.queryOverpass('query', controller.signal, false, async () => {
+    throw new Error('network disconnected');
+  }), /Saved maps remain available/);
+  await assert.rejects(api.queryOverpass('query', controller.signal, false, async () =>
+    new Response('<html>provider failure</html>', { status: 200 })), /invalid data/);
+});
+test('directory tries fast exact names first, preserving partial search for other names', async () => {
+  const directory = { elements: [{ type: 'way', id: 10, center: { lat: -27.99, lon: 153.01 },
+    tags: { leisure: 'golf_course', name: 'Mercure Capricorn Resort Golf' } }] };
+  let calls = 0;
+  const found = await api.searchCourseDirectory('Mercure Capricorn Resort Golf', new AbortController().signal, false, async (_, options) => {
+    calls++;
+    const query = new URLSearchParams(options.body).get('data');
+    assert.ok(query.includes('["name"="Mercure Capricorn Resort Golf"]'));
+    assert.ok(!query.includes('["name"~'));
+    return new Response(JSON.stringify(directory), { status: 200 });
+  });
+  assert.equal(calls, 1);
+  assert.equal(found[0].id, 'osm-way-10');
+  calls = 0;
+  await api.searchCourseDirectory('Capricorn', new AbortController().signal, false, async (_, options) => {
+    calls++;
+    const query = new URLSearchParams(options.body).get('data');
+    assert.equal(query.includes('["name"~'), calls === 2);
+    return new Response(JSON.stringify(calls === 1 ? { elements: [] } : directory), { status: 200 });
+  });
+  assert.equal(calls, 2);
 });
 test('offline cache survives restart, rejects cross-course records, and retains old map if writing fails', async () => {
   store.clear();

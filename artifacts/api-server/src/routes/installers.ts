@@ -5,7 +5,7 @@ const router: IRouter = Router();
 const installerDirectory = path.resolve(process.cwd(), "../../generated-artifacts/android");
 
 // Only the verified build outputs are downloadable; no arbitrary file paths.
-for (const build of ["1.0.5-build6", "1.0.6-build7", "1.0.7-build8", "1.0.8-build9"]) {
+for (const build of ["1.0.5-build6", "1.0.6-build7", "1.0.7-build8", "1.0.8-build9", "1.0.9-build10"]) {
   for (const extension of ["apk", "zip"] as const) {
   const filename = `DRC-Golf-Tempo-${build}.${extension}`;
   router.get(`/downloads/${filename}`, (req, res) => {

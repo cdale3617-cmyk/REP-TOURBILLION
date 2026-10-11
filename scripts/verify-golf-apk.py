@@ -81,6 +81,8 @@ if args.previous:
             "capricorn-championship",
             "select-capricorn-championship",
             "holefocus-",
+            "course-map-current-hole",
+            "course-name-map-",
         ]
         source = json.loads(Path("artifacts/drc-golf-tourbillion/data/pacific-surfaces.json").read_text())
         required.extend(feature["id"] for feature in source["features"][:5])

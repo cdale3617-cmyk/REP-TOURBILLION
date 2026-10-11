@@ -30,6 +30,7 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="tool/[slug]" options={{ headerShown: false }} />
+      <Stack.Screen name="course-map" options={{ headerShown: false }} />
       <Stack.Screen name="record" options={{ headerShown: false }} />
       <Stack.Screen name="videos" options={{ headerShown: false }} />
       <Stack.Screen name="backup" options={{ headerShown: false }} />

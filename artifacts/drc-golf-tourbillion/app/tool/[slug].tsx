@@ -14,6 +14,7 @@ import { useColors } from '@/hooks/useColors';
 import { WedgeMatrixCard } from '@/components/WedgeMatrixCard';
 import { canonicalCourseId, getCourseGeometry } from '@/utils/courseGeometry';
 import { courseSearchQuery, searchCourseDirectory } from '@/utils/courseMapApi';
+import { courseMapHref } from '@/utils/courseMapNavigation';
 import { golfActivityMetricsSchema } from '@/utils/backup';
 import { summarizePhoneMotion, type MotionVector3 } from '@/utils/phoneMotion';
 import { GreenReadings } from '@/components/GreenReadings';
@@ -823,12 +824,14 @@ export default function ToolScreen() {
         <Card><Text style={[styles.cardTitle, { color: colors.foreground }]}>Find a course near you</Text><EmptyNote>Public OpenStreetMap results include phone, website, and address fields when available.</EmptyNote><ActionButton title={findingCourses ? 'Finding nearby courses…' : 'Find nearby courses'} icon="map-pin" disabled={findingCourses} onPress={() => void nearbyCourses()} testID="find-nearby-courses" />{findingCourses ? <ActivityIndicator color={colors.primary} /> : null}</Card>
         {[...discovered, ...golf.courses.filter((course) => !discovered.some((item) => item.id === course.id))].map((course) => (
           <Card key={course.id}>
-            <Pressable accessibilityRole="button" accessibilityLabel={`${course.name} course details`} onPress={() => { golf.addCourse(course); router.push('/tool/course-information'); }}>
+            <Pressable testID={`course-name-map-${course.id}`} accessibilityRole="button"
+              accessibilityLabel={`${course.name} hole-by-hole map`} onPress={() => router.push(courseMapHref(course))}>
               <View style={styles.inlineRow}><Feather name="map-pin" size={18} color={colors.primary} /><View style={{ flex: 1 }}><Text style={[styles.cardTitle, { color: colors.foreground }]}>{course.name}</Text><Text style={[styles.small, { color: colors.mutedForeground }]}>{course.area} · {course.source}</Text><Text style={[styles.small, { color: getCourseGeometry(course.id) ? colors.primary : colors.mutedForeground }]}>{getCourseGeometry(course.id) ? `${getCourseGeometry(course.id)!.holes.length}/18 numbered paths available` : 'Hole layout not loaded · download free map in Round where available'}</Text></View><Feather name="chevron-right" size={16} color={colors.mutedForeground} /></View>
             </Pressable>
             <Pressable accessibilityRole="link" accessibilityLabel={`View ${course.name} location on OpenStreetMap`} style={{ minHeight: 44, justifyContent: 'center' }} onPress={() => void Linking.openURL(`https://www.openstreetmap.org/?mlat=${course.latitude}&mlon=${course.longitude}#map=15/${course.latitude}/${course.longitude}`)}>
-              <Text style={[styles.small, { color: colors.primary }]}>View course location on OpenStreetMap</Text>
+              <Text style={[styles.small, { color: colors.primary }]}>Whole-course location on OpenStreetMap · external</Text>
             </Pressable>
+            <ActionButton title="Course details" icon="info" secondary onPress={() => { golf.addCourse(course); router.push('/tool/course-information'); }} />
             <ActionButton title="Start round at this course" icon="flag" onPress={() => startRoundAtCourse(course)} />
           </Card>
         ))}

@@ -41,6 +41,7 @@ const api = load('../utils/courseMapApi.ts');
 const geometry = load('../utils/courseGeometry.ts');
 const cache = load('../hooks/useCourseMap.ts');
 const championship = load('../utils/capricornChampionship.ts');
+const navigation = load('../utils/courseMapNavigation.ts');
 const box = (x, y, d) => [{ lat: y, lon: x }, { lat: y, lon: x + d }, { lat: y + d, lon: x + d }, { lat: y + d, lon: x }, { lat: y, lon: x }];
 // Synthetic parser fixtures only. These are never bundled as real course maps.
 const raw = {
@@ -58,6 +59,23 @@ const raw = {
   ],
 };
 const mapped = () => data.parseCourseMap(structuredClone(raw), 'osm-way-10', 'way-10', new Date('2026-10-11T01:00:00Z'));
+test('course-name map navigation resolves saved and discovered courses without changing golf state', () => {
+  const saved = { id: 'pacific-golf-club', name: 'Pacific Golf Club', par: 72, latitude: -27.5166, longitude: 153.1064 };
+  const courses = [saved];
+  const before = structuredClone(courses);
+  assert.equal(navigation.resolveMapCourse(navigation.courseMapHref(saved).params, courses), saved);
+  assert.equal(navigation.resolveMapCourse({ courseId: 'osm-relation-1668736' }, courses), saved);
+  const discovered = { ...saved, id: 'osm-way-123', name: 'Directory course' };
+  const href = navigation.courseMapHref(discovered);
+  assert.equal(href.pathname, '/course-map');
+  assert.equal(navigation.resolveMapCourse(href.params, courses).id, discovered.id);
+  assert.deepEqual(courses, before, 'viewing must not save or select a different course');
+  assert.equal(navigation.resolveMapCourse({ courseId: championship.CAPRICORN_CHAMPIONSHIP_ID }, courses),
+    championship.capricornChampionshipCourse);
+  assert.equal(navigation.resolveMapCourse({ ...href.params, latitude: 'NaN' }, courses), undefined);
+  assert.equal(navigation.resolveMapCourse({ ...href.params, courseId: 'osm-way-123);out;' }, courses), undefined);
+});
+
 test('Championship has 18 real offline paths, correct pars and no invented green targets', () => {
   const g = geometry.getCourseGeometry(championship.CAPRICORN_CHAMPIONSHIP_ID);
   assert.equal(g.holes.length, 18);

@@ -13,6 +13,7 @@ import { useColors } from '@/hooks/useColors';
 import { AntiGlareButton } from '@/components/AntiGlareButton';
 import type { WindReading } from '@/utils/wind';
 import { useLiveGps } from '@/context/LiveGpsContext';
+import { courseMapHref } from '@/utils/courseMapNavigation';
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -84,7 +85,11 @@ export default function HomeScreen() {
         <View style={styles.courseHead}>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Label tone="primary">{activeRound ? `Round in progress · hole ${activeRound.currentHole}` : 'Next round'}</Label>
-            <Text numberOfLines={2} style={[styles.courseName, { color: colors.foreground }]}>{course?.name ?? 'Choose a course'}</Text>
+            <Pressable testID="home-course-map" accessibilityRole="button"
+              accessibilityLabel={course ? `View ${course.name} hole-by-hole map` : 'Choose a course'}
+              onPress={() => router.push(course ? courseMapHref(course) : '/tool/course-library')}>
+              <Text numberOfLines={2} style={[styles.courseName, { color: colors.foreground }]}>{course?.name ?? 'Choose a course'}</Text>
+            </Pressable>
             <Text style={[styles.smallText, { color: colors.mutedForeground }]}>{course?.area ?? 'Course library'} · Par {course?.par ?? 72}</Text>
           </View>
         </View>

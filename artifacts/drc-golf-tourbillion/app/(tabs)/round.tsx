@@ -14,7 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getRoundMapHeight } from '@/utils/roundViewport';
 import { RoundScoreControls } from '@/components/RoundScoreControls';
 import { ExpandablePanel } from '@/components/ExpandablePanel';
-import { getCourseGeometry, getTargetDistance, isDailyPinCurrent } from '@/utils/courseGeometry';
+import { getTargetDistance, isDailyPinCurrent } from '@/utils/courseGeometry';
+import { useCourseMap } from '@/hooks/useCourseMap';
 import { getHoleMapLayout } from '@/utils/holeMapLayout';
 import { WindReading } from '@/utils/wind';
 import { HolePerformanceEditor } from '@/components/HolePerformanceEditor';
@@ -50,14 +51,24 @@ export default function RoundScreen() {
   const minimumScore = Math.max(1, (hole?.putts ?? 0) + (hole?.penalties ?? 0));
   const played = activeRound?.holes.filter((item) => item.score !== null).length ?? 0;
   const total = useMemo(() => activeRound?.holes.reduce((sum, item) => sum + (item.score ?? 0), 0) ?? 0, [activeRound]);
-  const geometry = getCourseGeometry(course?.id);
+   const courseMap = useCourseMap(course);
+   const geometry = courseMap.geometry;
   const holeGeometry = geometry?.holes.find((item) => item.hole === (activeRound?.currentHole ?? 1));
+   const targetLabel = holeGeometry?.targetKind === 'path-end' ? 'Mapped hole end' : 'Green reference';
   const { meters: gpsDistance, reason: distanceStatus } = getTargetDistance(gps, holeGeometry?.target, now);
   const displayDistance = gpsDistance === null ? null : Math.round(unit === 'yd' ? gpsDistance * 1.09361 : gpsDistance);
   const recordedPin = dailyPins.find((pin) => pin.courseId === course?.id && pin.hole === activeRound?.currentHole);
   const dailyPin = recordedPin && isDailyPinCurrent(recordedPin, now) ? recordedPin : undefined;
   const pinDistance = getTargetDistance(gps, dailyPin, now);
   const displayPinDistance = pinDistance.meters === null ? null : Math.round(unit === 'yd' ? pinDistance.meters * 1.09361 : pinDistance.meters);
+  const mapActions = <View style={{ gap: 6, marginVertical: 6 }}>
+    <ActionButton secondary icon="download" title={courseMap.busy ? 'Loading free course map…' : courseMap.map || geometry?.features?.length ? 'Refresh free course map' : 'Load free course map'}
+      testID="load-course-map" disabled={!course || courseMap.busy} onPress={() => void courseMap.load()} />
+    {courseMap.busy ? <ActivityIndicator color={colors.primary} /> : null}
+    {courseMap.error ? <Text accessibilityRole="alert" style={[styles.bodySmall, { color: colors.destructive }]}>{courseMap.error}</Text> : null}
+    {courseMap.map ? <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>{geometry?.holes.length ?? 0}/18 numbered paths · {geometry?.features?.length ?? 0} mapped surfaces · {courseMap.cached ? 'Saved offline' : 'Not saved offline'} · downloaded {courseMap.map.downloadedAt.slice(0, 10)}{courseMap.map.omitted ? ` · ${courseMap.map.omitted} unsupported or ambiguous features omitted` : ''}. Missing features remain unknown; maps may change. Refresh needs internet.</Text>
+      : <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>{geometry?.features?.length ? `${geometry.holes.length} numbered paths and ${geometry.features.length} sourced surfaces ${geometry.source === 'OpenStreetMap · source-checked' ? 'bundled offline' : 'available in this session; offline cache unavailable'}. Data ${geometry.checkedAt.slice(0, 10)}. Refresh requires internet.` : 'Download real OpenStreetMap layouts where available. Course and hole coverage varies. No fairways or hazards are invented.'}</Text>}
+  </View>;
 
   function begin() {
     startRound(lastCourseId);
@@ -68,14 +79,15 @@ export default function RoundScreen() {
       <PageHeading title={activeRound ? `Hole ${activeRound.currentHole} · Par ${hole?.par ?? '—'}` : 'ROUND'} subtitle={landscape ? undefined : course?.name ?? 'Choose a course to get started'} eyebrow={course?.name && !landscape ? undefined : undefined} right={<Pill tone="muted">{played}/18 SCORED</Pill>} />
       {!activeRound ? (
           <Card style={styles.emptyCard}>
-           <View style={styles.pair}><Label tone="primary">Hole 1{holeGeometry ? ` · Par ${holeGeometry.par}` : ''}</Label><View style={{ flex: 1 }} /><Label>North up</Label></View>
-           <HoleMap geometry={holeGeometry} availableHeight={mapHeight} />
+            <View style={styles.pair}><Label tone="primary">Hole 1{holeGeometry?.par ? ` · Par ${holeGeometry.par}` : ''}</Label><View style={{ flex: 1 }} /><Label>North up</Label></View>
+            <HoleMap geometry={holeGeometry} features={geometry?.features} availableHeight={mapHeight} />
+            {mapActions}
           <View style={styles.emptyCopy}>
              <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>Start to keep score and use live GPS. The map shows the sourced playing path, not a satellite image.</Text>
           </View>
           <View style={[styles.courseReadiness, { borderTopColor: colors.border }]}>
             <Text style={[styles.bodySmall, { color: colors.primary }]}>{course?.name ?? 'COURSE NOT SELECTED'}</Text>
-            <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>{geometry ? '18 source-checked hole paths available' : 'GPS distances unavailable for this course'}</Text>
+             <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>{geometry ? `${geometry.holes.length}/18 numbered hole paths available · ${geometry.source}` : 'Load free mapped layouts below; some courses or holes are not mapped.'}</Text>
           </View>
            <ActionButton title="Start round · hole 1" icon="play" onPress={begin} disabled={!course || !isReady || !!storageError} testID="start-round" />
            <View style={styles.pair}>
@@ -97,18 +109,18 @@ export default function RoundScreen() {
           <Card style={styles.roundCard}>
              {!landscape ? <View style={styles.courseRow}>
               <View style={{ flex: 1 }}>
-                 <Label>Green reference · north up</Label>
+                 <Label>{targetLabel} · north up</Label>
               </View>
              </View> : null}
             {holeMapLayout.sideBySide ? (
               <View style={styles.splitHoleRow}>
                 <View style={styles.splitHoleMap}>
-                   <HoleMap geometry={holeGeometry} position={gpsDistance !== null ? gps : null} dailyPin={dailyPin} wind={currentWind} availableHeight={mapHeight} />
+                   <HoleMap geometry={holeGeometry} features={geometry?.features} position={gpsDistance !== null ? gps : null} dailyPin={dailyPin} wind={currentWind} availableHeight={mapHeight} />
                 </View>
                 <View style={styles.splitHoleDistance}>
                    <View style={[styles.readout, { borderColor: colors.border, backgroundColor: colors.muted }]}>
                      <View style={{ flex: 1, minWidth: 0 }}>
-                       <Label>To green reference</Label>
+                       <Label>To {targetLabel.toLowerCase()}</Label>
                        <Text style={[styles.distance, { color: colors.foreground }]}>{displayDistance !== null ? `${displayDistance}` : '—'}<Text style={[styles.unit, { color: colors.mutedForeground }]}> {unit}</Text></Text>
                      </View>
                      <StatusToggle testID="enable-gps" label={gpsButtonLabel} active={!!gps} requested={enabled} actionLabel={enabled ? 'Stop live GPS' : 'Enable live GPS'} onPress={() => setEnabled(!enabled)} compact />
@@ -120,10 +132,10 @@ export default function RoundScreen() {
               </View>
             ) : (
               <>
-                 <HoleMap geometry={holeGeometry} position={gpsDistance !== null ? gps : null} dailyPin={dailyPin} wind={currentWind} availableHeight={mapHeight} />
+                  <HoleMap geometry={holeGeometry} features={geometry?.features} position={gpsDistance !== null ? gps : null} dailyPin={dailyPin} wind={currentWind} availableHeight={mapHeight} />
                 <View style={[styles.readout, { borderColor: colors.border, backgroundColor: colors.muted }]}>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Label>To green reference</Label>
+                     <Label>To {targetLabel.toLowerCase()}</Label>
                     <Text style={[styles.distance, { color: colors.foreground }]}>{displayDistance !== null ? `${displayDistance}` : '—'}<Text style={[styles.unit, { color: colors.mutedForeground }]}> {unit}</Text></Text>
                   </View>
                   <StatusToggle testID="enable-gps" label={gpsButtonLabel} active={!!gps} requested={enabled} actionLabel={enabled ? 'Stop live GPS' : 'Enable live GPS'} onPress={() => setEnabled(!enabled)} compact />
@@ -135,7 +147,8 @@ export default function RoundScreen() {
             )}
               {!holeMapLayout.sideBySide ? <RoundScoreControls score={score} minimumScore={minimumScore} hole={activeRound.currentHole} total={total} played={played} blocked={statsDirty || !isReady}
                 onScore={(nextScore) => setHoleScore(activeRound.currentHole, nextScore)} onHole={setCurrentHole} /> : null}
-             {gpsError ? <View style={styles.permissionRow}>
+              {mapActions}
+              {gpsError ? <View style={styles.permissionRow}>
                <Pressable testID="retry-gps" accessibilityRole="button" accessibilityLabel={`${gpsError} Retry GPS`} onPress={retry} style={{ minHeight: 44, justifyContent: 'center', flex: 1 }}>
                  <Text numberOfLines={2} style={[styles.bodySmall, { color: colors.destructive }]}>{gpsError} · Retry</Text>
                </Pressable>
@@ -148,7 +161,7 @@ export default function RoundScreen() {
              <View style={{ display: detailsOpen ? 'flex' : 'none', gap: 10 }}>
              {geometry && holeGeometry ? (
               <View style={{ gap: 8 }}>
-                <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>SOURCE-CHECKED HOLE {activeRound.currentHole} · {geometry.holes.length}/18 MAPPED · CHECKED {geometry.checkedAt}</Text>
+                <Text style={[styles.bodySmall, { color: colors.mutedForeground }]}>{geometry.source} · HOLE {activeRound.currentHole} · {geometry.holes.length}/18 MAPPED · DATA {geometry.checkedAt.slice(0, 10)}</Text>
                 <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(`https://www.openstreetmap.org/way/${holeGeometry.osmWayId}`)}>
                   <Text style={[styles.bodySmall, { color: colors.primary }]}>View source hole on OpenStreetMap</Text>
                 </Pressable>
@@ -179,7 +192,7 @@ export default function RoundScreen() {
               ) : (
                 <Text style={[styles.body, { color: colors.mutedForeground }]}>{recordedPin ? 'The previous pin has expired and is not used for distance. Record the current flag placement again.' : 'No current pin recorded for this hole. Green-reference distance above remains the sourced target.'}</Text>
               )}
-              {holeGeometry ? <DailyPinCapture key={`${activeRound.id}:${activeRound.currentHole}`} roundId={activeRound.id} courseId={activeRound.courseId} hole={activeRound.currentHole} target={holeGeometry.target} replacing={!!dailyPin} /> : <Text style={[styles.body, { color: colors.mutedForeground }]}>Pin capture requires a source-checked green reference for this hole.</Text>}
+              {holeGeometry && holeGeometry.targetKind !== 'path-end' ? <DailyPinCapture key={`${activeRound.id}:${activeRound.currentHole}`} roundId={activeRound.id} courseId={activeRound.courseId} hole={activeRound.currentHole} target={holeGeometry.target} replacing={!!dailyPin} /> : <Text style={[styles.body, { color: colors.mutedForeground }]}>Pin capture requires a mapped green reference for this hole; a playing-path endpoint is not treated as a green.</Text>}
             </View>
              </View>
           </Card>
@@ -187,7 +200,7 @@ export default function RoundScreen() {
            <ExpandablePanel title="Caddie advice" icon="compass" testID="round-caddie-toggle">
              <Card style={{ ...styles.adviceCard, borderLeftColor: colors.primary }}>
                <View style={styles.adviceHead}><Feather name="compass" size={16} color={colors.primary} /><Text style={[styles.adviceLabel, { color: colors.primary }]}>CADDIE ENGINE</Text></View>
-               <CaddieAssistant clubs={bag} unit={unit} currentHole={activeRound.currentHole} par={hole?.par} liveDistanceMeters={gpsDistance} wind={currentWind} />
+               <CaddieAssistant clubs={bag} unit={unit} currentHole={activeRound.currentHole} par={hole?.par} liveDistanceMeters={holeGeometry?.targetKind === 'path-end' ? null : gpsDistance} wind={currentWind} />
              </Card>
            </ExpandablePanel>
            {course ? <ExpandablePanel title="Course weather" icon="cloud" testID="round-weather-toggle"><WeatherCard latitude={geometry?.latitude ?? course.latitude} longitude={geometry?.longitude ?? course.longitude} onWindChange={handleWindChange} /></ExpandablePanel> : null}

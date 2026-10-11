@@ -147,7 +147,7 @@ export const moreTools: AppTool[] = [
     slug: 'course-library',
     title: 'Course Library',
     icon: 'map',
-    description: 'Browse local course references or look up nearby golf courses and contact details from OpenStreetMap.',
+    description: 'Find golf courses worldwide or nearby, with free OpenStreetMap hole layouts where community mapping is available.',
     howTo: ['Allow location when asked to search near you.', 'Tap Find nearby courses to query the public course directory.', 'Select a result to set it as your current course.'],
   },
   {

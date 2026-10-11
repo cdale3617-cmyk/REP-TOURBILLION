@@ -1,15 +1,23 @@
 import pacificHoles from '../data/pacific-holes.json';
+import pacificSurfaces from '../data/pacific-surfaces.json';
 
 export type Coordinate = { latitude: number; longitude: number };
+export type MapFeature = {
+  id: string;
+  kind: 'fairway' | 'green' | 'bunker' | 'water' | 'tee' | 'rough' | 'trees';
+  rings: Coordinate[][];
+};
 export type VerifiedHole = {
   hole: number;
-  par: number;
+  par?: number;
   osmWayId: string;
   path: Coordinate[];
   target: Coordinate;
+  targetKind?: 'green-reference' | 'path-end';
 };
 export type CourseGeometry = {
   holes: VerifiedHole[];
+  features?: MapFeature[];
   checkedAt: string;
   source: string;
   sourceUrl: string;
@@ -19,23 +27,35 @@ export type CourseGeometry = {
 
 const holes: VerifiedHole[] = pacificHoles.map((item) => {
   const path = item.path.map(([latitude, longitude]) => ({ latitude, longitude }));
-  return { ...item, path, target: path[path.length - 1] };
+  return { ...item, path, target: path[path.length - 1], targetKind: 'green-reference' };
 });
 const pacific: CourseGeometry = {
   holes,
-  checkedAt: '2026-10-04',
+  features: pacificSurfaces.features.map((feature): MapFeature => ({
+    id: feature.id,
+    kind: feature.kind as MapFeature['kind'],
+    rings: feature.rings.map(ring => ring.map(([latitude, longitude]) => ({ latitude, longitude }))),
+  })),
+  checkedAt: pacificSurfaces.retrievedAt.slice(0, 10),
   source: 'OpenStreetMap · source-checked',
   sourceUrl: 'https://www.openstreetmap.org/relation/1668736',
   latitude: -27.5166,
   longitude: 153.1064,
 };
 
+const downloaded = new Map<string, CourseGeometry>();
+export function registerCourseGeometry(courseId: string, geometry: CourseGeometry) {
+  downloaded.set(canonicalCourseId(courseId), geometry);
+}
+
 export function getCourseGeometry(courseId?: string): CourseGeometry | null {
-  return courseId === 'pacific-golf-club' || courseId === 'osm-relation-1668736' ? pacific : null;
+  if (!courseId) return null;
+  return downloaded.get(canonicalCourseId(courseId))
+    ?? (courseId === 'pacific-golf-club' || courseId === 'osm-relation-1668736' ? pacific : null);
 }
 
 export function canonicalCourseId(courseId: string): string {
-  return getCourseGeometry(courseId) ? 'pacific-golf-club' : courseId;
+  return courseId === 'osm-relation-1668736' ? 'pacific-golf-club' : courseId;
 }
 
 export function migrateMappedCourseReference<T extends { courseId: string }>(
@@ -116,7 +136,8 @@ export function getPinCaptureProblem(fix: DeviceFix | null, target: Coordinate |
 }
 
 export function createDailyPin(courseId: string, hole: number, fix: DeviceFix, requestedAt: number, now: number): DailyPin {
-  const target = getCourseGeometry(courseId)?.holes.find((item) => item.hole === hole)?.target;
+  const mapped = getCourseGeometry(courseId)?.holes.find((item) => item.hole === hole);
+  const target = mapped?.targetKind === 'path-end' ? undefined : mapped?.target;
   const problem = getPinCaptureProblem(fix, target, requestedAt, now);
   if (problem) throw new Error(problem);
   const midnight = new Date(now);

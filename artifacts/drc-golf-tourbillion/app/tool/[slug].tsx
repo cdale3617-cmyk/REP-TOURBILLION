@@ -13,6 +13,7 @@ import { labTools, moreTools, preRoundItems } from '@/data/catalog';
 import { useColors } from '@/hooks/useColors';
 import { WedgeMatrixCard } from '@/components/WedgeMatrixCard';
 import { canonicalCourseId, getCourseGeometry } from '@/utils/courseGeometry';
+import { courseSearchQuery, parseCourseDirectory, queryOverpass } from '@/utils/courseMapApi';
 import { golfActivityMetricsSchema } from '@/utils/backup';
 import { summarizePhoneMotion, type MotionVector3 } from '@/utils/phoneMotion';
 import { GreenReadings } from '@/components/GreenReadings';
@@ -113,6 +114,9 @@ export default function ToolScreen() {
   const [manualInputs, setManualInputs] = useState<Record<string, string>>({});
   const [findingCourses, setFindingCourses] = useState(false);
   const [discovered, setDiscovered] = useState<GolfCourse[]>([]);
+  const [courseNameQuery, setCourseNameQuery] = useState('');
+  const directoryRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => directoryRequest.current?.abort(), []);
   const [guidesOpen, setGuidesOpen] = useState(true);
   const [motionCapturing, setMotionCapturing] = useState(false);
   const [motionElapsedMs, setMotionElapsedMs] = useState(0);
@@ -328,6 +332,29 @@ export default function ToolScreen() {
     } finally {
       if (timeout !== undefined) clearTimeout(timeout);
       setFindingCourses(false);
+    }
+  }
+
+  async function searchWorldwideCourses() {
+    let query: string;
+    try { query = courseSearchQuery(courseNameQuery); } catch (e) { setMessage(e instanceof Error ? e.message : 'Enter a course name.'); return; }
+    directoryRequest.current?.abort();
+    const controller = new AbortController();
+    directoryRequest.current = controller;
+    const timer = setTimeout(() => controller.abort(), 35000);
+    setFindingCourses(true); setMessage(''); setDiscovered([]);
+    try {
+      const courses = parseCourseDirectory(await queryOverpass(query, controller.signal, Platform.OS !== 'web'));
+      if (directoryRequest.current !== controller) return;
+      setDiscovered(courses);
+      setMessage(courses.length ? `Found ${courses.length} worldwide matches. Similar names can refer to different courses; check location before starting.`
+        : 'No matching course names are mapped in this directory. Try a shorter name; saved courses remain below.');
+    } catch (e) {
+      if (directoryRequest.current === controller) setMessage(controller.signal.aborted ? 'Worldwide search timed out. Saved courses remain usable; try later.'
+        : e instanceof Error ? e.message : 'Worldwide search failed.');
+    } finally {
+      clearTimeout(timer);
+      if (directoryRequest.current === controller) setFindingCourses(false);
     }
   }
 
@@ -789,11 +816,19 @@ export default function ToolScreen() {
     }
     if (slug === 'course-library') {
       return <>
+        <Card><Text style={[styles.cardTitle, { color: colors.foreground }]}>Worldwide course search</Text>
+          <Field label="Course name" value={courseNameQuery} onChangeText={setCourseNameQuery} placeholder="Enter a course name" testID="worldwide-course-query" />
+          <ActionButton title={findingCourses ? 'Searching…' : 'Search worldwide'} icon="search" testID="search-worldwide-courses" disabled={findingCourses} onPress={() => void searchWorldwideCourses()} />
+          <EmptyNote>Free OpenStreetMap directory. Real hole layouts can be downloaded in Round when mapped; a course listing does not guarantee hole-map coverage. Confirm the scoring card’s pars with the club.</EmptyNote>
+        </Card>
         <Card><Text style={[styles.cardTitle, { color: colors.foreground }]}>Find a course near you</Text><EmptyNote>Public OpenStreetMap results include phone, website, and address fields when available.</EmptyNote><ActionButton title={findingCourses ? 'Finding nearby courses…' : 'Find nearby courses'} icon="map-pin" disabled={findingCourses} onPress={() => void nearbyCourses()} testID="find-nearby-courses" />{findingCourses ? <ActivityIndicator color={colors.primary} /> : null}</Card>
         {[...discovered, ...golf.courses.filter((course) => !discovered.some((item) => item.id === course.id))].map((course) => (
           <Card key={course.id}>
             <Pressable accessibilityRole="button" accessibilityLabel={`${course.name} course details`} onPress={() => { golf.addCourse(course); router.push('/tool/course-information'); }}>
-              <View style={styles.inlineRow}><Feather name="map-pin" size={18} color={colors.primary} /><View style={{ flex: 1 }}><Text style={[styles.cardTitle, { color: colors.foreground }]}>{course.name}</Text><Text style={[styles.small, { color: colors.mutedForeground }]}>{course.area} · {course.source}</Text><Text style={[styles.small, { color: getCourseGeometry(course.id) ? colors.primary : colors.mutedForeground }]}>{getCourseGeometry(course.id) ? '18/18 source-checked hole paths' : 'No verified hole geometry · GPS distances unavailable'}</Text></View><Feather name="chevron-right" size={16} color={colors.mutedForeground} /></View>
+              <View style={styles.inlineRow}><Feather name="map-pin" size={18} color={colors.primary} /><View style={{ flex: 1 }}><Text style={[styles.cardTitle, { color: colors.foreground }]}>{course.name}</Text><Text style={[styles.small, { color: colors.mutedForeground }]}>{course.area} · {course.source}</Text><Text style={[styles.small, { color: getCourseGeometry(course.id) ? colors.primary : colors.mutedForeground }]}>{getCourseGeometry(course.id) ? `${getCourseGeometry(course.id)!.holes.length}/18 numbered paths available` : 'Hole layout not loaded · download free map in Round where available'}</Text></View><Feather name="chevron-right" size={16} color={colors.mutedForeground} /></View>
+            </Pressable>
+            <Pressable accessibilityRole="link" accessibilityLabel={`View ${course.name} location on OpenStreetMap`} style={{ minHeight: 44, justifyContent: 'center' }} onPress={() => void Linking.openURL(`https://www.openstreetmap.org/?mlat=${course.latitude}&mlon=${course.longitude}#map=15/${course.latitude}/${course.longitude}`)}>
+              <Text style={[styles.small, { color: colors.primary }]}>View course location on OpenStreetMap</Text>
             </Pressable>
             <ActionButton title="Start round at this course" icon="flag" onPress={() => startRoundAtCourse(course)} />
           </Card>

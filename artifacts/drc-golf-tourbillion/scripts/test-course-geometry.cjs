@@ -44,6 +44,22 @@ test('only exact course identities can use curated targets', () => {
   }
 });
 
+test('bundled fallback contains licensed, closed real surface polygons, not generated decoration', () => {
+  const asset = require('../data/pacific-surfaces.json');
+  assert.equal(asset.license, 'ODbL');
+  assert.equal(asset.sourceUrl, geometry.sourceUrl);
+  assert.equal(geometry.features.length, 144);
+  for (const kind of ['fairway', 'green', 'tee', 'bunker', 'water', 'trees']) assert.ok(geometry.features.some(f => f.kind === kind));
+  for (const feature of geometry.features) {
+    assert.match(feature.id, /^(way|relation)-\d+$/);
+    for (const ring of feature.rings) {
+      assert.ok(ring.length >= 4);
+      assert.deepEqual(ring[0], ring.at(-1));
+      assert.ok(ring.every(p => Number.isFinite(p.latitude) && Number.isFinite(p.longitude)));
+    }
+  }
+});
+
 test('reselecting the mapped course through OpenStreetMap preserves its saved identity and daily pins', () => {
   const saved = {
     id: 'pacific-golf-club', name: 'Pacific Golf Club', latitude: -27.5166, longitude: 153.1064,

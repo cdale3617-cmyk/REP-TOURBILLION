@@ -37,9 +37,9 @@ const colors = {
     mapBase: '#161B22',
     mapContour: '#2C3440',
     mapRough: '#4A5360',
-    mapFairway: '#6B7684',
-    mapOuterGreen: '#98A2B0',
-    mapGreen: '#D5DBE4',
+    mapFairway: '#376A45',
+    mapOuterGreen: '#4B9A62',
+    mapGreen: '#75D58A',
   },
 
   dark: {
@@ -69,9 +69,9 @@ const colors = {
     mapBase: '#161B22',
     mapContour: '#2C3440',
     mapRough: '#4A5360',
-    mapFairway: '#6B7684',
-    mapOuterGreen: '#98A2B0',
-    mapGreen: '#D5DBE4',
+    mapFairway: '#376A45',
+    mapOuterGreen: '#4B9A62',
+    mapGreen: '#75D58A',
   },
 
   // Border radius (in px). Sync from the sibling web artifact's --radius

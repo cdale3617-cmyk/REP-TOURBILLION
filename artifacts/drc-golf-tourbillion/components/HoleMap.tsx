@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { AppText as Text } from '@/components/AppText';
 import { Feather } from '@expo/vector-icons';
-import Svg, { Circle, ClipPath, Defs, G, Path, Rect, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, ClipPath, Defs, G, Path, Rect } from 'react-native-svg';
 import { useColors } from '@/hooks/useColors';
 import { Coordinate, distanceMeters, MapFeature, VerifiedHole } from '@/utils/courseGeometry';
 import { getHoleFocusClip, getHoleMapLayout } from '@/utils/holeMapLayout';
@@ -62,7 +62,7 @@ const NEAR_M = 200;
 const FEATURE_STYLE: Record<MapFeature['kind'], { fill: string; opacity: number; stroke?: string }> = {
   rough: { fill: 'mapRough', opacity: 0.35 },
   trees: { fill: 'mapContour', opacity: 0.9 },
-  water: { fill: 'mapContour', opacity: 1, stroke: 'mapOuterGreen' },
+  water: { fill: 'mapContour', opacity: 1, stroke: 'mapRough' },
   fairway: { fill: 'mapFairway', opacity: 0.75 },
   tee: { fill: 'mapOuterGreen', opacity: 0.8 },
   bunker: { fill: 'foreground', opacity: 0.5 },
@@ -82,7 +82,6 @@ export function HoleMap({ geometry, position, dailyPin, wind, availableHeight, f
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const { viewWidth, viewHeight, frameHeight, plot } = getHoleMapLayout(windowWidth, windowHeight, availableHeight);
   const shortMap = viewHeight < 120;
-  const labelSize = shortMap ? 10 : 12;
   const flowDirection = wind ? windFlowDirectionDegrees(wind.windDirection) : null;
   const movingWind = wind && flowDirection !== null && Number.isFinite(wind.windKph) && wind.windKph >= 1;
   if (!geometry || !geometry.path || geometry.path.length < 2) {
@@ -153,16 +152,8 @@ export function HoleMap({ geometry, position, dailyPin, wind, availableHeight, f
   const focusClipId = `holefocus-${geometry.osmWayId}-${geometry.hole}`;
   const col = colors as unknown as Record<string, string>;
 
-  // Labels sit beyond the marker, away from the path, and are dropped when they would collide.
+  // Keep all text outside the drawing so no label can cover the playing path.
   const tee = path[0];
-  const teeAbove = tee.y > target.y;
-  const clampX = (x: number) => Math.max(30, Math.min(viewWidth - 30, x));
-  const teeLabel = { x: clampX(tee.x), y: tee.y + (teeAbove ? labelSize + 11 : -11) };
-  const tgtLabel = { x: clampX(target.x), y: target.y + (teeAbove ? -12 : labelSize + 12) };
-  const inView = (y: number) => y >= labelSize && y <= viewHeight - 2;
-  const labelsClear = Math.hypot(tee.x - target.x, tee.y - target.y) > 34 || Math.abs(teeLabel.y - tgtLabel.y) > labelSize + 4;
-  const showTeeLabel = inView(teeLabel.y) && labelsClear && !(shortMap && Math.abs(tee.y - target.y) < 28);
-  const showTgtLabel = inView(tgtLabel.y) && labelsClear && !(shortMap && Math.abs(tee.y - target.y) < 28);
   const distanceNote = (c: Coordinate) => `${Math.round(distanceMeters(c, geometry.target))} m`;
   const note = position && !playerNear
     ? `GPS fix is ${distanceNote(position)} from the mapped target, outside the view.`
@@ -171,7 +162,8 @@ export function HoleMap({ geometry, position, dailyPin, wind, availableHeight, f
       : hasSurfaces ? `Hole ${geometry.hole} view. Real outlines cropped near this path; may be incomplete.` : 'Playing path only. No fairway or green outlines mapped.';
   const dFor = (rings: { x: number; y: number }[][]) => rings.map((r) => `${r.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')}Z`).join(' ');
   return (
-    <View testID={`hole-map-${geometry.hole}`} accessibilityLabel={`Hole ${geometry.hole}, selected-hole view, ${hasSurfaces ? 'mapped surfaces and' : 'path-only,'} tee-to-${geometry.targetKind === 'path-end' ? 'hole-end' : 'green-reference'} playing path, north up. ${note}${wind ? ` Wind from ${compassDirectionLabel(wind.windDirection)} at ${Math.round(wind.windKph)} kilometres per hour` : ''}`} style={{ width: '100%', height: frameHeight, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.mapBase }}>
+    <View testID={`hole-map-${geometry.hole}`} accessibilityLabel={`Hole ${geometry.hole}, selected-hole view, ${hasSurfaces ? 'mapped surfaces and' : 'path-only,'} tee-to-${geometry.targetKind === 'path-end' ? 'hole-end' : 'green-reference'} playing path, north up. ${note}${wind ? ` Wind from ${compassDirectionLabel(wind.windDirection)} at ${Math.round(wind.windKph)} kilometres per hour` : ''}`} style={{ width: '100%', gap: 7 }}>
+      <View testID="hole-map-drawing" style={{ height: frameHeight, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.mapBase }}>
       <Svg width="100%" height="100%" viewBox={`0 0 ${viewWidth} ${viewHeight}`}>
         <Defs>
           <ClipPath id={clipId}><Rect x={0} y={0} width={viewWidth} height={viewHeight} /></ClipPath>
@@ -187,20 +179,29 @@ export function HoleMap({ geometry, position, dailyPin, wind, availableHeight, f
             return <Path key={`${kind}-${v.f.id}`} d={dFor(v.rings)} fillRule="evenodd" fill={col[st.fill]} fillOpacity={st.opacity} stroke={st.stroke ? col[st.stroke] : 'none'} strokeWidth={st.stroke ? 1 : 0} />;
           }))}
           </G>
-          <Path d={path.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${p.y}`).join(' ')} stroke={colors.primary} strokeWidth={3} fill="none" />
+          <Path d={path.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${p.y}`).join(' ')} stroke={colors.mapGreen} strokeWidth={3} fill="none" />
         </G>
         <Circle cx={tee.x} cy={tee.y} r={shortMap ? 3 : 5} fill={colors.mutedForeground} />
-        {showTeeLabel ? <SvgText x={teeLabel.x} y={teeLabel.y} fontSize={labelSize} textAnchor="middle" fill={colors.foreground}>Tee</SvgText> : null}
-        <Circle cx={target.x} cy={target.y} r={shortMap ? 3 : 6} fill={colors.primary} />
-        {showTgtLabel ? <SvgText x={tgtLabel.x} y={tgtLabel.y} fontSize={labelSize} textAnchor="middle" fill={colors.foreground}>{geometry.targetKind === 'path-end' ? 'Hole end' : 'Green ref'}</SvgText> : null}
+        <Circle cx={target.x} cy={target.y} r={shortMap ? 3 : 6} fill={colors.mapGreen} />
         {pin ? <Circle cx={pin.x} cy={pin.y} r={shortMap ? 5 : 9} fill="none" stroke={colors.foreground} strokeWidth={2} /> : null}
         {player ? <Circle cx={player.x} cy={player.y} r={shortMap ? 3 : 6} fill={colors.foreground} stroke={colors.background} strokeWidth={2} /> : null}
-        <SvgText x={viewWidth / 2} y={labelSize + 6} fontSize={labelSize} textAnchor="middle" fill={colors.foreground}>HOLE {geometry.hole}</SvgText>
-        <SvgText x={viewWidth - 12} y={labelSize + 6} fontSize={labelSize} textAnchor="end" fill={colors.foreground}>N ↑</SvgText>
       </Svg>
-      {!shortMap ? (
-        <Text numberOfLines={2} style={[styles.note, { color: colors.mutedForeground, pointerEvents: 'none' }]}>{note}{pin ? ' Ring: your pin.' : ''}{player ? ' White dot: you.' : ''}</Text>
+      {movingWind ? (
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
+          {windArrowAnchors.map((anchor, index) => (
+            <WindArrow key={index} anchor={anchor} index={index} direction={flowDirection} duration={windAnimationDuration(wind.windKph)} color={colors.primary} />
+          ))}
+        </View>
       ) : null}
+      </View>
+      <View style={styles.legend}>
+        <View style={[styles.dot, { backgroundColor: colors.mutedForeground }]} />
+        <Text style={[styles.note, { color: colors.foreground }]}>Tee</Text>
+        <View style={[styles.dot, { backgroundColor: colors.mapGreen }]} />
+        <Text style={[styles.note, { color: colors.foreground }]}>{geometry.targetKind === 'path-end' ? 'Hole end' : 'Green ref'}</Text>
+        <Text style={[styles.note, { color: colors.mutedForeground, marginLeft: 'auto' }]}>Hole {geometry.hole} · N ↑</Text>
+      </View>
+      <Text testID="hole-map-caption" style={[styles.note, { color: colors.mutedForeground }]}>{note}{pin ? ' Ring: your pin.' : ''}{player ? ' White dot: you.' : ''}</Text>
       <Pressable accessibilityRole="link" accessibilityLabel="OpenStreetMap copyright" hitSlop={8} onPress={() => { Linking.openURL('https://www.openstreetmap.org/copyright').catch(() => undefined); }} style={[styles.attribution, { backgroundColor: colors.mapBase }]}>
         <Text style={[styles.attributionText, { color: colors.mutedForeground }]}>© OpenStreetMap</Text>
       </Pressable>
@@ -210,22 +211,17 @@ export function HoleMap({ geometry, position, dailyPin, wind, availableHeight, f
           <Text style={[styles.windText, { color: colors.foreground }]}>{wind.windKph < 1 ? 'CALM' : `FROM ${compassDirectionLabel(wind.windDirection)} · ${Math.round(wind.windKph)} km/h`}</Text>
         </View>
       ) : null}
-      {movingWind ? (
-        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
-          {windArrowAnchors.map((anchor, index) => (
-            <WindArrow key={index} anchor={anchor} index={index} direction={flowDirection} duration={windAnimationDuration(wind.windKph)} color={colors.primary} />
-          ))}
-        </View>
-      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  note: { position: 'absolute', left: 9, bottom: 7, maxWidth: '64%', fontSize: 10, lineHeight: 13 },
-  attribution: { position: 'absolute', right: 6, bottom: 5, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6, opacity: 0.92 },
+  note: { fontSize: 11, lineHeight: 15 },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  dot: { width: 7, height: 7, borderRadius: 4 },
+  attribution: { alignSelf: 'flex-end', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6, opacity: 0.92 },
   attributionText: { fontSize: 10, lineHeight: 13, textDecorationLine: 'underline' },
   windArrow: { position: 'absolute', width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
-  windBadge: { position: 'absolute', top: 9, left: 9, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10, borderWidth: 1 },
+  windBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10, borderWidth: 1 },
   windText: { fontSize: 12, lineHeight: 16, fontFamily: 'Inter_700Bold', letterSpacing: 0.15 },
 });

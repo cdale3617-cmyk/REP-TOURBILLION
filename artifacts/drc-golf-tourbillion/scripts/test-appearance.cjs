@@ -72,6 +72,18 @@ test('anti-glare gives white text on dark surfaces and readable dark buttons; of
   }
 });
 
+test('map paths stay green and readable without turning the screen or buttons green', () => {
+  for (const antiGlare of [false, true]) {
+    const palette = resolveColors('dark', antiGlare);
+    for (const token of ['mapGreen', 'mapFairway', 'mapOuterGreen']) {
+      const rgb = palette[token].slice(1).match(/../g).map(value => parseInt(value, 16));
+      assert.ok(rgb[1] > rgb[0] && rgb[1] > rgb[2], `${token} should be green`);
+    }
+    assert.ok((luminance(palette.mapGreen) + 0.05) / (luminance(palette.mapBase) + 0.05) >= 4.5);
+    assert.equal(palette.primary, antiGlare ? '#FFFFFF' : '#BEC7D3');
+  }
+});
+
 test('stored display choice loads and toggles both directions without writing golf records', async () => {
   const session = await harness('true');
   assert.equal(session.render().antiGlare, true);
